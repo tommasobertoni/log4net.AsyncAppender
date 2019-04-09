@@ -8,6 +8,8 @@ using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("log4net.Elasticsearch.Async.Tests")]
+
 namespace log4net.Elasticsearch.Async
 {
     public class ElasticsearchAsyncAppender : AppenderSkeleton

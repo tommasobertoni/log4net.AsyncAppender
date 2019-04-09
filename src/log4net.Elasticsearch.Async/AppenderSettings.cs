@@ -27,7 +27,8 @@ namespace log4net.Elasticsearch.Async
 
         public string Bulk { get; }
 
-        public Uri Uri { get; }
+        private readonly Lazy<Uri> _lazyUri;
+        public Uri Uri => _lazyUri.Value;
 
         private readonly Dictionary<string, string> _settings;
 
@@ -38,7 +39,9 @@ namespace log4net.Elasticsearch.Async
 
         public AppenderSettings(Dictionary<string, string> settings)
         {
-            _settings = settings;
+            _settings = settings == null
+                ? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                : new Dictionary<string, string>(settings, StringComparer.OrdinalIgnoreCase);
 
             // Init
 
@@ -62,20 +65,7 @@ namespace log4net.Elasticsearch.Async
             this.Bulk = int.TryParse(TryGet("BufferSize"), out var bufferSize) &&
                         bufferSize > 1 ? "/_bulk" : string.Empty;
 
-            this.Uri = CreateUri();
-
-            // Local functions
-
-            string TryGet(params string[] coalescingSettingsKeys)
-            {
-                foreach (var key in coalescingSettingsKeys)
-                    if (settings.TryGetValue(key, out var value))
-                        return value;
-
-                return string.Empty;
-            }
-
-            Uri CreateUri()
+            _lazyUri = new Lazy<Uri>(() =>
             {
                 var sb = new StringBuilder();
                 sb.Append($"{this.Scheme}://");
@@ -92,6 +82,17 @@ namespace log4net.Elasticsearch.Async
 
                 var uri = new Uri(sb.ToString());
                 return uri;
+            });
+
+            // Local functions
+
+            string TryGet(params string[] coalescingSettingsKeys)
+            {
+                foreach (var key in coalescingSettingsKeys)
+                    if (_settings.TryGetValue(key, out var value))
+                        return value;
+
+                return string.Empty;
             }
         }
 
@@ -105,12 +106,15 @@ namespace log4net.Elasticsearch.Async
 
         private static Dictionary<string, string> Parse(string connectionString)
         {
+            if (string.IsNullOrEmpty(connectionString))
+                return new Dictionary<string, string>();
+
             var csBuilder = new DbConnectionStringBuilder
             {
-                ConnectionString = connectionString.Replace("{", "\"").Replace("}", "\"")
+                ConnectionString = connectionString
             };
 
-            var settings = new Dictionary<string, string>();
+            var settings = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             foreach (string key in csBuilder.Keys)
                 settings[key] = csBuilder[key].ToString();
 
