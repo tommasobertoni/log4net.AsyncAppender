@@ -27,7 +27,7 @@ namespace log4net.Elasticsearch.Async
 
         public bool IsRunning => !this.RunningJob.IsCompleted;
 
-        public Task RunningJob { get; private set; } = Task.CompletedTask;
+        public Task RunningJob { get; private set; }
 
         private readonly StringBuilder _stringBuilder = new StringBuilder();
 
@@ -35,7 +35,7 @@ namespace log4net.Elasticsearch.Async
         private readonly Uri _endpoint;
         private readonly ConcurrentQueue<LoggingEvent> _queue;
         private readonly SemaphoreSlim _semaphore;
-        private readonly Func<LoggingEvent, string> _eventJsonFormatter;
+        private readonly Func<LoggingEvent, string> _eventJsonSerializer;
         private readonly CancellationToken _cancellationToken;
 
         public EventProcessor(
@@ -50,20 +50,23 @@ namespace log4net.Elasticsearch.Async
             _endpoint = endpoint;
             _queue = queue;
             _semaphore = semaphore;
-            _eventJsonFormatter = eventJsonFormatter;
+            _eventJsonSerializer = eventJsonFormatter;
             _cancellationToken = cancellationToken;
+
+            this.RunningJob = Task.CompletedTask;
         }
 
         public void Start()
         {
-            if (RunningJob != null && !RunningJob.IsCompleted)
+            if (this.RunningJob != null && !this.RunningJob.IsCompleted)
                 throw new InvalidOperationException("The processor is already running.");
 
-            RunningJob = Task.Factory.StartNew(
+            this.RunningJob = Task.Factory.StartNew(
                 DoProcessAsync,
                 _cancellationToken,
                 TaskCreationOptions.LongRunning,
-                TaskScheduler.Current);
+                TaskScheduler.Current)
+                .Result /* get the DoProcessAsync task */ ;
         }
 
         private async Task DoProcessAsync()
@@ -74,7 +77,7 @@ namespace log4net.Elasticsearch.Async
             while (!_cancellationToken.IsCancellationRequested)
             {
                 eventsBuffer.Clear();
-                await DequeueIntoBufferAsync(eventsBuffer);
+                await DequeueIntoBufferAsync(eventsBuffer).ConfigureAwait(false);
 
                 if (eventsBuffer.Any())
                 {
@@ -82,7 +85,7 @@ namespace log4net.Elasticsearch.Async
                     {
                         var json = SerializeToJson(eventsBuffer);
                         baseRequest.Content = new StringContent(json, Encoding.UTF8, "application/json");
-                        var response = await _httpClient.SendAsync(baseRequest, _cancellationToken);
+                        var response = await _httpClient.SendAsync(baseRequest).ConfigureAwait(false);
                         response.EnsureSuccessStatusCode();
                     }
                     catch (Exception ex)
@@ -100,7 +103,7 @@ namespace log4net.Elasticsearch.Async
             {
                 do
                 {
-                    await _semaphore.WaitAsync();
+                    await _semaphore.WaitAsync().ConfigureAwait(false);
                     bool dequeued = _queue.TryDequeue(out var @event);
                     if (dequeued && @event != null)
                         buffer.Add(@event);
@@ -132,9 +135,9 @@ namespace log4net.Elasticsearch.Async
             if (eventsBuffer.Count != 1)
                 _stringBuilder.AppendLine("{\"index\" : {} }");
 
-            eventsBuffer.ForEach(e => _stringBuilder.AppendLine(_eventJsonFormatter(e)));
+            eventsBuffer.ForEach(e => _stringBuilder.AppendLine(_eventJsonSerializer(e)));
 
-            var json = eventsBuffer.ToString();
+            var json = _stringBuilder.ToString();
             _stringBuilder.Clear();
 
             return json;

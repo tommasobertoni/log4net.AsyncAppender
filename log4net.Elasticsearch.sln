@@ -14,7 +14,13 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{DEF4E46C-6867-4D51-AE8F-2EED5F115D00}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "log4net.Elasticsearch.Async.Tests", "tests\log4net.Elasticsearch.Async.Tests\log4net.Elasticsearch.Async.Tests.csproj", "{AC75EFF2-C64D-43EF-918F-49CA03881739}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "log4net.Elasticsearch.Async.Tests", "tests\unit\log4net.Elasticsearch.Async.Tests\log4net.Elasticsearch.Async.Tests.csproj", "{AC75EFF2-C64D-43EF-918F-49CA03881739}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "unit", "unit", "{E87415A2-C794-4E24-9D4C-10D256D32FED}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "integration", "integration", "{3435716D-824F-4939-83E0-3986347C9682}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "log4net.Elasticsearch.Async.IntegrationTests", "tests\integration\log4net.Elasticsearch.Async.IntegrationTests\log4net.Elasticsearch.Async.IntegrationTests.csproj", "{FF699376-5862-4476-AD15-0A942C65CCBD}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -30,13 +36,20 @@ Global
 		{AC75EFF2-C64D-43EF-918F-49CA03881739}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{AC75EFF2-C64D-43EF-918F-49CA03881739}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{AC75EFF2-C64D-43EF-918F-49CA03881739}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FF699376-5862-4476-AD15-0A942C65CCBD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FF699376-5862-4476-AD15-0A942C65CCBD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FF699376-5862-4476-AD15-0A942C65CCBD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FF699376-5862-4476-AD15-0A942C65CCBD}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{7489C1A4-C78C-44E8-B1CC-DE1260F408C8} = {10B5E624-10DF-48D0-9E93-35058DE366DB}
-		{AC75EFF2-C64D-43EF-918F-49CA03881739} = {DEF4E46C-6867-4D51-AE8F-2EED5F115D00}
+		{AC75EFF2-C64D-43EF-918F-49CA03881739} = {E87415A2-C794-4E24-9D4C-10D256D32FED}
+		{E87415A2-C794-4E24-9D4C-10D256D32FED} = {DEF4E46C-6867-4D51-AE8F-2EED5F115D00}
+		{3435716D-824F-4939-83E0-3986347C9682} = {DEF4E46C-6867-4D51-AE8F-2EED5F115D00}
+		{FF699376-5862-4476-AD15-0A942C65CCBD} = {3435716D-824F-4939-83E0-3986347C9682}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {66467BAA-DD9B-4D42-90E3-08139FDE8419}
