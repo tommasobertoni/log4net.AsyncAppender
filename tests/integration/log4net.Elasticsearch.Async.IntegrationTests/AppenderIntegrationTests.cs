@@ -183,7 +183,7 @@ namespace log4net.Elasticsearch.Async.IntegrationTests
             AddToLogsCount(n);
 
             // Wait an arbitrary delay for the appender to process the events.
-            var arbitraryDelayMillis = ((n / _appender.MaxBatchSize) - 1) * 1000;
+            var arbitraryDelayMillis = ((n / _appender.MaxBatchSize) + 1) * 1000;
             await Task.Delay(arbitraryDelayMillis);
 
             VerifyLogsCount(exact: true);
