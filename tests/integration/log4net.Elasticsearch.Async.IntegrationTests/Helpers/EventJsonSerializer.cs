@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using log4net.Core;
-using System.Linq;
 using Utf8Json;
 using Utf8Json.Resolvers;
 

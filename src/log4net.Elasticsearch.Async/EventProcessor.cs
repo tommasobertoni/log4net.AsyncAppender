@@ -25,6 +25,13 @@ namespace log4net.Elasticsearch.Async
             }
         }
 
+        private volatile bool _isProcessing;
+        public bool IsProcessing
+        {
+            get { return _isProcessing; }
+            private set { _isProcessing = value; }
+        }
+
         public bool IsRunning => !this.RunningJob.IsCompleted;
 
         public Task RunningJob { get; private set; }
@@ -54,6 +61,7 @@ namespace log4net.Elasticsearch.Async
             _cancellationToken = cancellationToken;
 
             this.RunningJob = Task.CompletedTask;
+            this.IsProcessing = false;
         }
 
         public void Start()
@@ -72,20 +80,24 @@ namespace log4net.Elasticsearch.Async
         private async Task DoProcessAsync()
         {
             var eventsBuffer = new List<LoggingEvent>(this.MaxBatchSize /* initial capacity */);
-            var baseRequest = CreateBaseRequest();
 
             while (!_cancellationToken.IsCancellationRequested)
             {
                 eventsBuffer.Clear();
+
                 await DequeueIntoBufferAsync(eventsBuffer).ConfigureAwait(false);
 
                 if (eventsBuffer.Any())
                 {
+                    this.IsProcessing = true;
+
                     try
                     {
                         var json = SerializeToJson(eventsBuffer);
+                        var baseRequest = CreateBaseRequest();
                         baseRequest.Content = new StringContent(json, Encoding.UTF8, "application/json");
-                        var response = await _httpClient.SendAsync(baseRequest).ConfigureAwait(false);
+                        // Don't use the cancellation token here, allow the last events to flush.
+                        var response = await _httpClient.SendAsync(baseRequest, CancellationToken.None).ConfigureAwait(false);
                         response.EnsureSuccessStatusCode();
                     }
                     catch (Exception ex)
@@ -94,6 +106,8 @@ namespace log4net.Elasticsearch.Async
                     }
 
                     eventsBuffer.Clear();
+
+                    this.IsProcessing = false;
                 }
             }
 
@@ -101,17 +115,25 @@ namespace log4net.Elasticsearch.Async
 
             async Task DequeueIntoBufferAsync(List<LoggingEvent> buffer)
             {
-                do
+                try
                 {
-                    await _semaphore.WaitAsync().ConfigureAwait(false);
-                    bool dequeued = _queue.TryDequeue(out var @event);
-                    if (dequeued && @event != null)
-                        buffer.Add(@event);
+                    do
+                    {
+                        await _semaphore.WaitAsync(_cancellationToken).ConfigureAwait(false);
+                        bool dequeued = _queue.TryDequeue(out var @event);
+                        if (dequeued && @event != null)
+                            buffer.Add(@event);
 
-                } while (
-                    !_queue.IsEmpty &&
-                    buffer.Count <= this.MaxBatchSize &&
-                    !_cancellationToken.IsCancellationRequested);
+                    } while (
+                        !_queue.IsEmpty &&
+                        buffer.Count <= this.MaxBatchSize &&
+                        !_cancellationToken.IsCancellationRequested);
+                }
+                catch (OperationCanceledException)
+                {
+                    // The cancellation token has been canceled.
+                    // Continue execution and flush the last dequeue events.
+                }
             }
         }
 

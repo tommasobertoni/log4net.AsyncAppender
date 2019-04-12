@@ -3,6 +3,9 @@
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
     <LangVersion>latest</LangVersion>
+    <Version>0.1.0</Version>
+    <Authors>Tommaso Bertoni</Authors>
+    <Description>Elasticsearch appender for log4net.</Description>
   </PropertyGroup>
 
   <ItemGroup>

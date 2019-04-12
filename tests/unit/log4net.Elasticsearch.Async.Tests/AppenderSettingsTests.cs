@@ -101,15 +101,14 @@ namespace log4net.Elasticsearch.Async.Tests
         }
 
         [Theory]
-        [InlineData("https", "test", "pwd", "myServer.com", "80", "anIndex", "routing123", 10, true)]
-        [InlineData("https", "test", "pwd", "myServer.com", "80", "anIndex", "routing123", 10, false)]
-        [InlineData("https", "test", "pwd", "myServer.com", "80", "anIndex", "routing123", 1, true)]
-        [InlineData("https", "test", "pwd", "myServer.com", "80", "anIndex", "routing123", 1, false)]
-        [InlineData("https", "test", "pwd", "myServer.com", "80", "anIndex", null, 10, true)]
+        [InlineData("https", "test", "pwd", "myServer.com", "80", "anIndex", "routing123", true)]
+        [InlineData("https", "test", "pwd", "myServer.com", "80", "anIndex", "routing123", false)]
+        [InlineData("https", "test", "pwd", "myServer.com", "80", "anIndex", "", true)]
+        [InlineData("https", "test", "pwd", "myServer.com", "80", "anIndex", null, true)]
         public void Settings_are_initialized_correctly_with_connection_string(
-            string scheme, string user, string password, string server, string port, string index, string routing, int bufferSize, bool rolling)
+            string scheme, string user, string password, string server, string port, string index, string routing, bool rolling)
         {
-            var connectionString = $"Scheme={scheme};User={user};Pwd={password};Server={server};Port={port};Index={index};Routing={routing};BufferSize={bufferSize};Rolling={rolling}";
+            var connectionString = $"Scheme={scheme};User={user};Pwd={password};Server={server};Port={port};Index={index};Routing={routing};Rolling={rolling}";
 
             var settings = new AppenderSettings(connectionString);
             Assert.True(settings.AreValid());
@@ -124,24 +123,8 @@ namespace log4net.Elasticsearch.Async.Tests
             Assert.Equal(server, settings.Server);
             Assert.Equal(port, settings.Port);
             Assert.Equal(rolling, settings.IsRollingIndex);
-
-            if (settings.IsRollingIndex)
-            {
-                Assert.NotEqual(index, settings.Index);
-                Assert.Contains(index, settings.Index);
-            }
-            else
-                Assert.Equal(index, settings.Index);
-
-            if (string.IsNullOrEmpty(routing))
-                Assert.True(string.IsNullOrEmpty(settings.Routing));
-            else
-                Assert.Contains(routing, settings.Routing);
-
-            if (bufferSize > 1)
-                Assert.False(string.IsNullOrEmpty(settings.Bulk));
-            else
-                Assert.True(string.IsNullOrEmpty(settings.Bulk));
+            Assert.Equal(index, settings.Index);
+            Assert.Equal(routing ?? string.Empty /* settings properties are never null */, settings.Routing);
         }
     }
 }

@@ -21,7 +21,7 @@ namespace log4net.Elasticsearch.Async
 
         public int MaxBatchSize { get; set; } = 512;
 
-        public int CloseTimeoutMillis { get; set; } = 10000;
+        public int CloseTimeoutMillis { get; set; } = 5000;
 
         #region Appender configuration
 
@@ -51,6 +51,15 @@ namespace log4net.Elasticsearch.Async
 
         public bool Initialized { get; private set; }
 
+        private volatile bool _acceptsLoggingEvents;
+        public bool AcceptsLoggingEvents
+        {
+            get { return _acceptsLoggingEvents; }
+            private set { _acceptsLoggingEvents = value; }
+        }
+
+        public bool IsProcessing => _processors?.Any(p => p.IsProcessing) ?? false;
+
         internal Task RunningJobs { get; private set; }
 
         private readonly SemaphoreSlim _semaphore = new SemaphoreSlim(0);
@@ -58,10 +67,12 @@ namespace log4net.Elasticsearch.Async
         private readonly CancellationTokenSource _cts = new CancellationTokenSource();
         private readonly List<EventProcessor> _processors = new List<EventProcessor>();
 
-        private AppenderSettings _settings;
+        public AppenderSettings Settings { get; private set; }
 
         public ElasticsearchAsyncAppender()
         {
+            this.Initialized = false;
+            this.AcceptsLoggingEvents = false;
         }
 
         #region Appender
@@ -79,7 +90,11 @@ namespace log4net.Elasticsearch.Async
 
         protected override void Append(LoggingEvent[] loggingEvents)
         {
-            if (!this.Initialized) return;
+            if (!this.Initialized || !this.AcceptsLoggingEvents)
+            {
+                this.ErrorHandler?.Error("This appender cannot process logging events.");
+                return;
+            }
 
             foreach (var @event in loggingEvents)
                 _eventsQueue.Enqueue(@event);
@@ -89,7 +104,11 @@ namespace log4net.Elasticsearch.Async
 
         protected override void Append(LoggingEvent loggingEvent)
         {
-            if (!this.Initialized) return;
+            if (!this.Initialized || !this.AcceptsLoggingEvents)
+            {
+                this.ErrorHandler?.Error("This appender cannot process logging events.");
+                return;
+            }
 
             _eventsQueue.Enqueue(loggingEvent);
             _semaphore.Release();
@@ -101,17 +120,25 @@ namespace log4net.Elasticsearch.Async
 
             if (!this.Initialized) return;
 
+            this.AcceptsLoggingEvents = false;
             _cts.Cancel();
+
             var closingTimeout = Task.Delay(this.CloseTimeoutMillis);
+
             var runningJobs = this._processors.Select(p => p.RunningJob);
             var runningJobsTermination = Task.WhenAll(runningJobs);
+
             int completedTaskIndex = Task.WaitAny(closingTimeout, runningJobsTermination);
+            if (completedTaskIndex == 0)
+                this.ErrorHandler?.Error("Running jobs termination timed out during appender closing.");
 
             _semaphore.Dispose();
             _processors.Clear();
 
             this.Initialized = false;
         }
+
+        ~ElasticsearchAsyncAppender() => this.OnClose();
 
         #endregion
 
@@ -153,9 +180,9 @@ namespace log4net.Elasticsearch.Async
                     return false;
                 }
 
-                _settings = new AppenderSettings(this.ConnectionString);
+                Settings = new AppenderSettings(this.ConnectionString);
 
-                if (!_settings.AreValid())
+                if (!Settings.AreValid())
                 {
                     this.ErrorHandler?.Error("Some required settings are missing.");
                     return false;
@@ -172,10 +199,14 @@ namespace log4net.Elasticsearch.Async
 
         private void Configure()
         {
-            var appenderConfiguratorDelegate = GetAppenderConfiguratorDelegate();
-            if (appenderConfiguratorDelegate != default)
+            try
             {
-                appenderConfiguratorDelegate(this);
+                var appenderConfiguratorDelegate = GetAppenderConfiguratorDelegate();
+                appenderConfiguratorDelegate?.Invoke(this);
+            }
+            catch (Exception ex)
+            {
+                this.ErrorHandler?.Error("Error during configuration", ex);
             }
         }
 
@@ -190,7 +221,7 @@ namespace log4net.Elasticsearch.Async
             {
                 var processor = new EventProcessor(
                     this.HttpClient,
-                    _settings.Uri,
+                    Settings.Uri,
                     _eventsQueue,
                     _semaphore,
                     eventJsonSerializer,
@@ -206,6 +237,7 @@ namespace log4net.Elasticsearch.Async
             }
 
             this.Initialized = true;
+            this.AcceptsLoggingEvents = true;
         }
 
         private Func<LoggingEvent, string> GetEventJsonSerializerDelegate()

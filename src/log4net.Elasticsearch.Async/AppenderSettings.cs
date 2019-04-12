@@ -25,8 +25,6 @@ namespace log4net.Elasticsearch.Async
 
         public string Routing { get; }
 
-        public string Bulk { get; }
-
         private readonly Lazy<Uri> _lazyUri;
         public Uri Uri => _lazyUri.Value;
 
@@ -51,19 +49,8 @@ namespace log4net.Elasticsearch.Async
             this.Server = TryGet("Server");
             this.Port = TryGet("Port");
             this.IsRollingIndex = bool.TryParse(TryGet("Rolling"), out var isRollingIndex) ? isRollingIndex : false;
-
-            var indexName = TryGet("Index");
-            this.Index = this.IsRollingIndex
-                ? $"{indexName}-{DateTime.UtcNow.ToString("yyyy.MM.dd")}"
-                : indexName;
-
-            var routingName = TryGet("Routing");
-            this.Routing = !string.IsNullOrWhiteSpace(routingName)
-                ? $"?routing={routingName}"
-                : string.Empty;
-
-            this.Bulk = int.TryParse(TryGet("BufferSize"), out var bufferSize) &&
-                        bufferSize > 1 ? "/_bulk" : string.Empty;
+            this.Index = TryGet("Index");
+            this.Routing = TryGet("Routing");
 
             _lazyUri = new Lazy<Uri>(() =>
             {
@@ -78,7 +65,15 @@ namespace log4net.Elasticsearch.Async
                 if (!string.IsNullOrEmpty(this.Port))
                     sb.Append($":{this.Port}");
 
-                sb.Append($"/{this.Index}/logEvent{this.Routing}{this.Bulk}");
+                var indexForRouting = this.IsRollingIndex
+                    ? $"{this.Index}-{DateTime.UtcNow.ToString("yyyy.MM.dd")}"
+                    : this.Index;
+
+                var routingForUri = string.IsNullOrWhiteSpace(this.Routing)
+                    ? string.Empty
+                    : $"?routing={this.Routing}";
+
+                sb.Append($"/{this.Index}/logEvent{routingForUri}/_bulk");
 
                 var uri = new Uri(sb.ToString());
                 return uri;

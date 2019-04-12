@@ -14,16 +14,16 @@ namespace log4net.Elasticsearch.Async.IntegrationTests
             Trace.WriteLine(message);
         }
 
-        public void Error(string message, Exception e)
+        public void Error(string message, Exception ex)
         {
             Trace.WriteLine(message);
-            Trace.WriteLine(e);
+            Trace.WriteLine(ex);
         }
 
-        public void Error(string message, Exception e, ErrorCode errorCode)
+        public void Error(string message, Exception ex, ErrorCode errorCode)
         {
             Trace.WriteLine($"{errorCode} {message}");
-            Trace.WriteLine(e);
+            Trace.WriteLine(ex);
         }
     }
 }
