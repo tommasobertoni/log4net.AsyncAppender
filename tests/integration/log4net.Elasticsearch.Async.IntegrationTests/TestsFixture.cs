@@ -43,7 +43,11 @@ namespace log4net.Elasticsearch.Async.IntegrationTests
         public void Dispose()
         {
             // Tear down
+            var appender = _log.GetElasticsearchAppender();
+
             _log.Logger.Repository.Shutdown();
+
+            Assert.False(appender.IsProcessing);
         }
     }
 

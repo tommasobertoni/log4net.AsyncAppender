@@ -182,11 +182,63 @@ namespace log4net.Elasticsearch.Async.IntegrationTests
             for (int i = 0; i < n; i++) _log.Info("test");
             AddToLogsCount(n);
 
-            // Wait an arbitrary delay for the appender to process the events.
-            var arbitraryDelayMillis = (n / _appender.MaxBatchSize) * 2 * 1000;
-            await Task.Delay(arbitraryDelayMillis);
+            var testTimeoutTask = Task.Delay(5000);
+            var processingTerminationTask = WaitForProcessingToTerminate();
+
+            await Task.WhenAny(testTimeoutTask, processingTerminationTask);
 
             VerifyLogsCount(exact: true);
+
+            // Local functions
+
+            async Task WaitForProcessingToTerminate() => await new ProcessingTerminationTask(_appender);
         }
+    }
+
+    internal class ProcessingTerminationTask
+    {
+        private readonly ElasticsearchAsyncAppender _appender;
+
+        public ProcessingTerminationTask(ElasticsearchAsyncAppender appender)
+        {
+            this._appender = appender;
+        }
+
+        public ProcessingTerminationAwaiter GetAwaiter() => new ProcessingTerminationAwaiter(_appender);
+    }
+
+    internal class ProcessingTerminationAwaiter : System.Runtime.CompilerServices.INotifyCompletion
+    {
+        private readonly ElasticsearchAsyncAppender _appender;
+        private Action _continuation;
+
+        public bool IsCompleted => !_appender.IsProcessing;
+
+        public ProcessingTerminationAwaiter(ElasticsearchAsyncAppender appender)
+        {
+            _appender = appender;
+        }
+
+        public void OnCompleted(Action continuation)
+        {
+            if (this.IsCompleted)
+                continuation();
+            else
+            {
+                _continuation = continuation;
+
+                Task.Run(async () =>
+                {
+                    while (!this.IsCompleted) 
+                        await Task.Delay(100); // Check interval
+
+                    this.Resume();
+                });
+            }
+        }
+
+        private void Resume() => _continuation();
+
+        public void GetResult() { }
     }
 }
