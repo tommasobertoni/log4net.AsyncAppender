@@ -62,12 +62,11 @@ namespace log4net.Elasticsearch.Async
 
         internal Task RunningJobs { get; private set; }
 
-        private readonly SemaphoreSlim _semaphore = new SemaphoreSlim(0);
-        private readonly ConcurrentQueue<LoggingEvent> _eventsQueue = new ConcurrentQueue<LoggingEvent>();
+        public AppenderSettings Settings { get; private set; }
+
         private readonly CancellationTokenSource _cts = new CancellationTokenSource();
         private readonly List<EventProcessor> _processors = new List<EventProcessor>();
-
-        public AppenderSettings Settings { get; private set; }
+        private int _targetProcessorIndex = 0;
 
         public ElasticsearchAsyncAppender()
         {
@@ -96,10 +95,10 @@ namespace log4net.Elasticsearch.Async
                 return;
             }
 
-            foreach (var @event in loggingEvents)
-                _eventsQueue.Enqueue(@event);
+            var processor = GetTargetProcessor();
 
-            _semaphore.Release(loggingEvents.Length);
+            foreach (var @event in loggingEvents)
+                processor.Append(@event);
         }
 
         protected override void Append(LoggingEvent loggingEvent)
@@ -110,8 +109,8 @@ namespace log4net.Elasticsearch.Async
                 return;
             }
 
-            _eventsQueue.Enqueue(loggingEvent);
-            _semaphore.Release();
+            var processor = GetTargetProcessor();
+            processor.Append(loggingEvent);
         }
         
         protected override void OnClose()
@@ -132,15 +131,25 @@ namespace log4net.Elasticsearch.Async
             if (completedTaskIndex == 0)
                 this.ErrorHandler?.Error("Running jobs termination timed out during appender closing.");
 
-            _semaphore.Dispose();
+            _processors.ForEach(p => p.Dispose());
             _processors.Clear();
 
             this.Initialized = false;
         }
 
+        #endregion
+
         ~ElasticsearchAsyncAppender() => this.OnClose();
 
-        #endregion
+        private EventProcessor GetTargetProcessor() => _processors[GetTargetProcessorIndex()];
+
+        private int GetTargetProcessorIndex()
+        {
+            var targetProcessorIndex = Interlocked.Increment(ref _targetProcessorIndex) % _processors.Count;
+            Interlocked.Exchange(ref _targetProcessorIndex, targetProcessorIndex);
+            targetProcessorIndex = _targetProcessorIndex;
+            return targetProcessorIndex;
+        }
 
         private bool TryActivate()
         {
@@ -222,8 +231,6 @@ namespace log4net.Elasticsearch.Async
                 var processor = new EventProcessor(
                     this.HttpClient,
                     Settings.Uri,
-                    _eventsQueue,
-                    _semaphore,
                     eventJsonSerializer,
                     _cts.Token)
                 {

@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 
 namespace log4net.Elasticsearch.Async
 {
-    internal class EventProcessor
+    internal class EventProcessor : IDisposable
     {
         public Action<Exception, List<LoggingEvent>> ExceptionHandler { get; set; }
 
@@ -38,30 +38,33 @@ namespace log4net.Elasticsearch.Async
 
         private readonly StringBuilder _stringBuilder = new StringBuilder();
 
+        private readonly SemaphoreSlim _semaphore = new SemaphoreSlim(0);
+        private readonly ConcurrentQueue<LoggingEvent> _eventsQueue = new ConcurrentQueue<LoggingEvent>();
+
         private readonly HttpClient _httpClient;
         private readonly Uri _endpoint;
-        private readonly ConcurrentQueue<LoggingEvent> _queue;
-        private readonly SemaphoreSlim _semaphore;
         private readonly Func<LoggingEvent, string> _eventJsonSerializer;
         private readonly CancellationToken _cancellationToken;
 
         public EventProcessor(
             HttpClient httpClient,
             Uri endpoint,
-            ConcurrentQueue<LoggingEvent> queue,
-            SemaphoreSlim semaphore,
             Func<LoggingEvent, string> eventJsonFormatter,
             CancellationToken cancellationToken)
         {
             _httpClient = httpClient;
             _endpoint = endpoint;
-            _queue = queue;
-            _semaphore = semaphore;
             _eventJsonSerializer = eventJsonFormatter;
             _cancellationToken = cancellationToken;
 
             this.RunningJob = Task.CompletedTask;
             this.IsProcessing = false;
+        }
+
+        public void Append(LoggingEvent @event)
+        {
+            _eventsQueue.Enqueue(@event);
+            _semaphore.Release();
         }
 
         public void Start()
@@ -120,12 +123,12 @@ namespace log4net.Elasticsearch.Async
                     do
                     {
                         await _semaphore.WaitAsync(_cancellationToken).ConfigureAwait(false);
-                        bool dequeued = _queue.TryDequeue(out var @event);
+                        bool dequeued = _eventsQueue.TryDequeue(out var @event);
                         if (dequeued && @event != null)
                             buffer.Add(@event);
 
                     } while (
-                        !_queue.IsEmpty &&
+                        !_eventsQueue.IsEmpty &&
                         buffer.Count <= this.MaxBatchSize &&
                         !_cancellationToken.IsCancellationRequested);
                 }
@@ -163,6 +166,11 @@ namespace log4net.Elasticsearch.Async
             _stringBuilder.Clear();
 
             return json;
+        }
+
+        public void Dispose()
+        {
+            _semaphore.Dispose();
         }
     }
 }
