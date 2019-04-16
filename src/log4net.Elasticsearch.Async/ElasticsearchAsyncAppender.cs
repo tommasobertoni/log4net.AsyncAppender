@@ -65,7 +65,7 @@ namespace log4net.Elasticsearch.Async
         public AppenderSettings Settings { get; private set; }
 
         private readonly CancellationTokenSource _cts = new CancellationTokenSource();
-        private readonly List<EventProcessor> _processors = new List<EventProcessor>();
+        private readonly List<EventsProcessor> _processors = new List<EventsProcessor>();
         private int _targetProcessorIndex = 0;
 
         public ElasticsearchAsyncAppender()
@@ -120,7 +120,9 @@ namespace log4net.Elasticsearch.Async
             if (!this.Initialized) return;
 
             this.AcceptsLoggingEvents = false;
+
             _cts.Cancel();
+            _processors.ForEach(p => p.Dispose());
 
             var closingTimeout = Task.Delay(this.CloseTimeoutMillis);
 
@@ -131,7 +133,6 @@ namespace log4net.Elasticsearch.Async
             if (completedTaskIndex == 0)
                 this.ErrorHandler?.Error("Running jobs termination timed out during appender closing.");
 
-            _processors.ForEach(p => p.Dispose());
             _processors.Clear();
 
             this.Initialized = false;
@@ -141,7 +142,7 @@ namespace log4net.Elasticsearch.Async
 
         ~ElasticsearchAsyncAppender() => this.OnClose();
 
-        private EventProcessor GetTargetProcessor() => _processors[GetTargetProcessorIndex()];
+        private EventsProcessor GetTargetProcessor() => _processors[GetTargetProcessorIndex()];
 
         private int GetTargetProcessorIndex()
         {
@@ -228,7 +229,7 @@ namespace log4net.Elasticsearch.Async
 
             for (int i = 0; i < this.ProcessorsCount; i++)
             {
-                var processor = new EventProcessor(
+                var processor = new EventsProcessor(
                     this.HttpClient,
                     Settings.Uri,
                     eventJsonSerializer,

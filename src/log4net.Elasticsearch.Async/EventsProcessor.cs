@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 
 namespace log4net.Elasticsearch.Async
 {
-    internal class EventProcessor : IDisposable
+    internal class EventsProcessor : IDisposable
     {
         public Action<Exception, List<LoggingEvent>> ExceptionHandler { get; set; }
 
@@ -46,7 +46,9 @@ namespace log4net.Elasticsearch.Async
         private readonly Func<LoggingEvent, string> _eventJsonSerializer;
         private readonly CancellationToken _cancellationToken;
 
-        public EventProcessor(
+        private readonly CancellationTokenSource _disposeCancellationTokenSource;
+
+        public EventsProcessor(
             HttpClient httpClient,
             Uri endpoint,
             Func<LoggingEvent, string> eventJsonFormatter,
@@ -55,7 +57,12 @@ namespace log4net.Elasticsearch.Async
             _httpClient = httpClient;
             _endpoint = endpoint;
             _eventJsonSerializer = eventJsonFormatter;
-            _cancellationToken = cancellationToken;
+
+            _disposeCancellationTokenSource = new CancellationTokenSource();
+            var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(
+                cancellationToken, _disposeCancellationTokenSource.Token);
+
+            _cancellationToken = linkedCts.Token;
 
             this.RunningJob = Task.CompletedTask;
             this.IsProcessing = false;
@@ -170,6 +177,7 @@ namespace log4net.Elasticsearch.Async
 
         public void Dispose()
         {
+            _disposeCancellationTokenSource.Cancel();
             _semaphore.Dispose();
         }
     }
