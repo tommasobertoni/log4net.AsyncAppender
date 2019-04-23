@@ -1,13 +1,9 @@
-using log4net.Core;
-using System;
-using System.Threading.Tasks;
-using System.Linq;
-using Xunit;
-using Moq;
-using System.Net.Http;
-using Moq.Protected;
-using System.Threading;
+﻿using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using Xunit;
+using Xunit.Abstractions;
 
 namespace log4net.Elasticsearch.Async.IntegrationTests
 {
@@ -15,230 +11,150 @@ namespace log4net.Elasticsearch.Async.IntegrationTests
     public class AppenderIntegrationTests : IDisposable
     {
         private readonly ILog _log;
+        private readonly ITestOutputHelper _output;
+        private readonly TestToolbox _toolbox;
 
-        private ElasticsearchAsyncAppender _appender;
-
-        private Mock<IErrorHandler> _mockErrorHandler;
-        private Mock<IEventJsonSerializer> _mockEventJsonSerializer;
-        private Mock<HttpClientHandler> _mockHttpMessageHandler;
-
-        public int _logsCount;
-
-        public AppenderIntegrationTests()
+        public AppenderIntegrationTests(ITestOutputHelper output)
         {
-            _logsCount = 0;
+            _output = output;
             _log = LogManager.GetLogger(typeof(AppenderIntegrationTests));
-            ReplaceConfiguredAppenderWithTestAppender(_log);
+            _toolbox = new TestToolbox(_log, output);
         }
 
-        #region Setup
+        #region Single log
 
-        private void ReplaceConfiguredAppenderWithTestAppender(ILog log)
+        [Fact]
+        public async Task Log_is_processed_with_single_processor()
         {
-            var appender = new ElasticsearchAsyncAppender
-            {
-                ProcessorsCount = 1,
-                MaxBatchSize = 512,
-                CloseTimeoutMillis = 5000,
-                EventJsonSerializer = TestEventJsonSerializer(),
-                ConnectionString = "Scheme=http;User=me;Pwd=pass;Server=myServer.com;Port=9000;Index=anIndex;Routing=aRoute;rolling=true",
-                ErrorHandler = TestErrorHandler(),
-                HttpClient = TestHttpClient()
-            };
-
-            appender.ActivateOptions();
-
-            Assert.True(appender.Initialized);
-            Assert.True(appender.AcceptsLoggingEvents);
-            Assert.False(appender.IsProcessing);
-            Assert.NotNull(appender.Settings);
-            Assert.True(appender.Settings.AreValid());
-
-            Assert.NotSame(appender, log.GetElasticsearchAppender());
-            log.SetElasticsearchAppender(appender);
-            Assert.Same(appender, log.GetElasticsearchAppender());
-
-            _appender = appender;
-
-            // Local functions
-
-            IEventJsonSerializer TestEventJsonSerializer()
-            {
-                var ejs = new EventJsonSerializer();
-                _mockEventJsonSerializer = new Mock<IEventJsonSerializer>();
-                _mockEventJsonSerializer
-                    .Setup(x => x.SerializeToJson(It.IsAny<LoggingEvent>()))
-                    .Returns<LoggingEvent>(e => ejs.SerializeToJson(e));
-
-                return _mockEventJsonSerializer.Object;
-            }
-
-            IErrorHandler TestErrorHandler()
-            {
-                var trace = new TraceErrorHandler();
-                _mockErrorHandler = new Mock<IErrorHandler>();
-
-                _mockErrorHandler
-                    .Setup(x => x.Error(It.IsAny<string>()))
-                    .Callback<string>(message => trace.Error(message));
-
-                _mockErrorHandler
-                    .Setup(x => x.Error(It.IsAny<string>(), It.IsAny<Exception>()))
-                    .Callback<string, Exception>((message, ex) => trace.Error(message, ex));
-
-                _mockErrorHandler
-                    .Setup(x => x.Error(It.IsAny<string>(), It.IsAny<Exception>(), It.IsAny<ErrorCode>()))
-                    .Callback<string, Exception, ErrorCode>((message, ex, code) => trace.Error(message, ex, code));
-
-                return _mockErrorHandler.Object;
-            }
-
-            HttpClient TestHttpClient()
-            {
-                _mockHttpMessageHandler = new Mock<HttpClientHandler>();
-                _mockHttpMessageHandler
-                    .Protected()
-                    .Setup<Task<HttpResponseMessage>>(
-                        "SendAsync",
-                        ItExpr.IsAny<HttpRequestMessage>(),
-                        ItExpr.IsAny<CancellationToken>()
-                    ).ReturnsAsync(new HttpResponseMessage
-                    {
-                        StatusCode = System.Net.HttpStatusCode.OK,
-                        Content = new StringContent(string.Empty)
-                    }).Verifiable();
-
-                return new HttpClient(_mockHttpMessageHandler.Object);
-            }
+            _toolbox.ReplaceConfiguredAppenderWithTestAppender(processorsCount: 1);
+            await Test_Log_is_processed();
         }
 
-        private void AddToLogsCount(int times) => _logsCount += times;
-
-        public void Dispose()
+        [Fact]
+        public async Task Log_is_processed_with_two_processors()
         {
-            _appender.Close();
-            VerifyLogsCount();
-            VerifyNoErrors();
+            _toolbox.ReplaceConfiguredAppenderWithTestAppender(processorsCount: 2);
+            await Test_Log_is_processed();
         }
 
-        private void VerifyLogsCount(bool exact = false)
+        [Fact]
+        public async Task Log_is_processed_with_many_processors()
         {
-            if (exact)
-            {
-                _mockEventJsonSerializer.Verify(x =>
-                    x.SerializeToJson(It.IsAny<LoggingEvent>()),
-                    Times.Exactly(_logsCount));
-
-                var httpCalls = (_logsCount / _appender.MaxBatchSize) + 1;
-                _mockHttpMessageHandler.Protected().Verify<Task<HttpResponseMessage>>(
-                    "SendAsync",
-                    Times.Exactly(httpCalls),
-                    ItExpr.IsAny<HttpRequestMessage>(),
-                    ItExpr.IsAny<CancellationToken>());
-            }
-            else
-            {
-                _mockEventJsonSerializer.Verify(x =>
-                    x.SerializeToJson(It.IsAny<LoggingEvent>()),
-                    Times.Between(1, _logsCount, Moq.Range.Inclusive));
-
-                var httpCalls = (_logsCount / _appender.MaxBatchSize) + 1;
-                _mockHttpMessageHandler.Protected().Verify<Task<HttpResponseMessage>>(
-                    "SendAsync",
-                    Times.Between(1, httpCalls, Moq.Range.Inclusive),
-                    ItExpr.IsAny<HttpRequestMessage>(),
-                    ItExpr.IsAny<CancellationToken>());
-            }
+            _toolbox.ReplaceConfiguredAppenderWithTestAppender(processorsCount: 10);
+            await Test_Log_is_processed();
         }
 
-        private void VerifyNoErrors()
+        private async Task Test_Log_is_processed()
         {
-            _mockErrorHandler.Verify(x => x.Error(It.IsAny<string>()), Times.Never);
-            _mockErrorHandler.Verify(x => x.Error(It.IsAny<string>(), It.IsAny<Exception>()), Times.Never);
-            _mockErrorHandler.Verify(x => x.Error(It.IsAny<string>(), It.IsAny<Exception>(), It.IsAny<ErrorCode>()), Times.Never);
+            _log.Info("test");
+            _toolbox.LogsCount += 1;
+
+            var testTimeoutTask = Task.Delay(5000);
+            var processingTerminationTask = new ProcessingTerminationTask(_toolbox.Appender).AsTask();
+            var completedTask = await Task.WhenAny(testTimeoutTask, processingTerminationTask);
+
+            if (completedTask == testTimeoutTask)
+                Assert.True(false, $"Timed out.");
         }
 
         #endregion
 
+        #region Many logs
+
         [Fact]
-        public void Log_is_processed()
+        public async Task Logs_are_processed_with_single_processor()
         {
-            _log.Info("test");
-            AddToLogsCount(1);
+            _toolbox.ReplaceConfiguredAppenderWithTestAppender(processorsCount: 1);
+            var loggedEventsCount = _toolbox.Appender.MaxBatchSize + 1;
+            await Test_Logs_are_processed(loggedEventsCount, nameof(Logs_are_processed_with_single_processor));
         }
 
         [Fact]
-        public void Logs_are_processed()
+        public async Task Logs_are_processed_with_two_processors()
         {
-            int n = 1001;
-            for (int i = 0; i < n; i++) _log.Info("test");
-            AddToLogsCount(n);
+            _toolbox.ReplaceConfiguredAppenderWithTestAppender(processorsCount: 2);
+            var loggedEventsCount = (_toolbox.Appender.MaxBatchSize * 2) + 1;
+            await Test_Logs_are_processed(loggedEventsCount, nameof(Logs_are_processed_with_two_processors));
         }
 
         [Fact]
-        public async Task All_logs_are_processed()
+        public async Task Logs_are_processed_with_many_processors()
         {
-            int n = (_appender.MaxBatchSize * 3) + 1;
-            for (int i = 0; i < n; i++) _log.Info("test");
-            AddToLogsCount(n);
+            _toolbox.ReplaceConfiguredAppenderWithTestAppender(processorsCount: 10);
+            var loggedEventsCount = (_toolbox.Appender.MaxBatchSize * 30) + 1;
+            await Test_Logs_are_processed(loggedEventsCount, nameof(Logs_are_processed_with_many_processors));
+        }
+
+        private async Task Test_Logs_are_processed(int loggedEventsCount, string testName)
+        {
+            var sw = System.Diagnostics.Stopwatch.StartNew();
+
+            for (int i = 0; i < loggedEventsCount; i++) _log.Info("test");
+            _toolbox.LogsCount += loggedEventsCount;
 
             var testTimeoutTask = Task.Delay(5000);
-            var processingTerminationTask = WaitForProcessingToTerminate();
+            var processingTerminationTask = new ProcessingTerminationTask(_toolbox.Appender).AsTask();
+            var resultingTask = await Task.WhenAny(testTimeoutTask, processingTerminationTask);
 
-            await Task.WhenAny(testTimeoutTask, processingTerminationTask);
+            sw.Stop();
 
-            VerifyLogsCount(exact: true);
-
-            // Local functions
-
-            async Task WaitForProcessingToTerminate() => await new ProcessingTerminationTask(_appender);
-        }
-    }
-
-    internal class ProcessingTerminationTask
-    {
-        private readonly ElasticsearchAsyncAppender _appender;
-
-        public ProcessingTerminationTask(ElasticsearchAsyncAppender appender)
-        {
-            this._appender = appender;
-        }
-
-        public ProcessingTerminationAwaiter GetAwaiter() => new ProcessingTerminationAwaiter(_appender);
-    }
-
-    internal class ProcessingTerminationAwaiter : System.Runtime.CompilerServices.INotifyCompletion
-    {
-        private readonly ElasticsearchAsyncAppender _appender;
-        private Action _continuation;
-
-        public bool IsCompleted => !_appender.IsProcessing;
-
-        public ProcessingTerminationAwaiter(ElasticsearchAsyncAppender appender)
-        {
-            _appender = appender;
-        }
-
-        public void OnCompleted(Action continuation)
-        {
-            if (this.IsCompleted)
-                continuation();
-            else
+            if (resultingTask == processingTerminationTask)
             {
-                _continuation = continuation;
-
-                Task.Run(async () =>
-                {
-                    while (!this.IsCompleted) 
-                        await Task.Delay(100); // Check interval
-
-                    this.Resume();
-                });
+                _output.WriteLine($"{testName}: All {loggedEventsCount} logs have been processed in: {sw.Elapsed}");
+                var efficiency = loggedEventsCount / sw.ElapsedMilliseconds;
+                _output.WriteLine($"Processed ~{efficiency} logs / millisecond.");
             }
+            else Assert.True(false, $"Timed out.");
+
+            _toolbox.VerifyLogsCount();
         }
 
-        private void Resume() => _continuation();
+        #endregion
 
-        public void GetResult() { }
+        #region Some logs
+
+        [Fact]
+        public async Task Some_logs_are_processed_with_single_processor()
+        {
+            _toolbox.ReplaceConfiguredAppenderWithTestAppender(processorsCount: 1);
+            // Only in this case, with only one processor, the logs are usually too many to be serialized
+            // and sent before the test finishes.
+            await Test_Some_logs_are_processed(allallowZeroHttpCallswZero: true);
+        }
+
+        [Fact]
+        public async Task Some_logs_are_processed_with_two_processors()
+        {
+            _toolbox.ReplaceConfiguredAppenderWithTestAppender(processorsCount: 2);
+            await Test_Some_logs_are_processed();
+        }
+
+        [Fact]
+        public async Task Some_logs_are_processed_with_many_processors()
+        {
+            _toolbox.ReplaceConfiguredAppenderWithTestAppender(processorsCount: 10);
+            await Test_Some_logs_are_processed();
+        }
+
+        private async Task Test_Some_logs_are_processed(bool allallowZeroHttpCallswZero = false)
+        {
+            int n = (_toolbox.Appender.MaxBatchSize * 30) + 1;
+            for (int i = 0; i < n; i++) _log.Info("test");
+            _toolbox.LogsCount += n;
+
+            // Delay exiting the test to allow some logs to be processed
+            // but don't wait the full processing to complete.
+            await Task.Delay(_toolbox.Appender.MaxBatchSize);
+
+            _toolbox.VerifyPartialLogsCount(allallowZeroHttpCallswZero);
+        }
+
+        #endregion
+
+        public void Dispose()
+        {
+            _toolbox.Appender.Close();
+            _toolbox.VerifyNoErrors();
+        }
     }
 }
