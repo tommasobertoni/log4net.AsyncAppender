@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<package >
+  <metadata>
+    <id>log4net.AsyncAppender</id>
+    <version>0.1.0-beta1</version>
+    <title>log4net.AsyncAppender</title>
+    <authors>Tommaso Bertoni</authors>
+    <owners>tommasobertoni</owners>
+    <license type="expression">MIT</license>
+    <projectUrl>https://github.com/tommasobertoni/log4net.Elasticsearch.Async/blob/master/README.md</projectUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>A fast and asynchronous Elasticsearch appender for log4net.</description>
+    <summary>This is a beta version.</summary>
+    <repository type="git" url="https://github.com/tommasobertoni/log4net.Elasticsearch.Async" />
+    <copyright>Copyright 2019</copyright>
+    <tags>log4net elasticsearch netstandard logging</tags>
+  </metadata>
+</package>
