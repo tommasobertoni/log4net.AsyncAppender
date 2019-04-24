@@ -65,7 +65,7 @@ namespace log4net.Elasticsearch.Async.IntegrationTests
         public async Task Logs_are_processed_with_single_processor()
         {
             _toolbox.ReplaceConfiguredAppenderWithTestAppender(processorsCount: 1);
-            var loggedEventsCount = _toolbox.Appender.MaxBatchSize + 1;
+            var loggedEventsCount = (int)(_toolbox.Appender.MaxBatchSize * 1.2);
             await Test_Logs_are_processed(loggedEventsCount, nameof(Logs_are_processed_with_single_processor));
         }
 
@@ -73,7 +73,7 @@ namespace log4net.Elasticsearch.Async.IntegrationTests
         public async Task Logs_are_processed_with_two_processors()
         {
             _toolbox.ReplaceConfiguredAppenderWithTestAppender(processorsCount: 2);
-            var loggedEventsCount = (_toolbox.Appender.MaxBatchSize * 2) + 1;
+            var loggedEventsCount = (_toolbox.Appender.MaxBatchSize * 4) + 1;
             await Test_Logs_are_processed(loggedEventsCount, nameof(Logs_are_processed_with_two_processors));
         }
 
@@ -81,7 +81,7 @@ namespace log4net.Elasticsearch.Async.IntegrationTests
         public async Task Logs_are_processed_with_many_processors()
         {
             _toolbox.ReplaceConfiguredAppenderWithTestAppender(processorsCount: 10);
-            var loggedEventsCount = (_toolbox.Appender.MaxBatchSize * 30) + 1;
+            var loggedEventsCount = (_toolbox.Appender.MaxBatchSize * 50) + 1;
             await Test_Logs_are_processed(loggedEventsCount, nameof(Logs_are_processed_with_many_processors));
         }
 
@@ -100,7 +100,7 @@ namespace log4net.Elasticsearch.Async.IntegrationTests
 
             if (resultingTask == processingTerminationTask)
             {
-                _output.WriteLine($"{testName}: All {loggedEventsCount} logs have been processed in: {sw.Elapsed}");
+                _output.WriteLine($"{testName}: {loggedEventsCount} logs have been processed in: {sw.Elapsed}");
                 var efficiency = loggedEventsCount / sw.ElapsedMilliseconds;
                 _output.WriteLine($"Processed ~{efficiency} logs / millisecond.");
             }
@@ -155,6 +155,16 @@ namespace log4net.Elasticsearch.Async.IntegrationTests
         {
             _toolbox.Appender.Close();
             _toolbox.VerifyNoErrors();
+
+            var testReport = _toolbox.GetReport();
+            _output.WriteLine($"Total json serializations: {testReport.JsonSerializationsCount}");
+            //_output.WriteLine($"Total errors: {testReport.ErrorsCount}");
+            _output.WriteLine($"Total http calls: {testReport.HttpCallsCount}");
+            _output.WriteLine($"Http calls batch sizes: [ {string.Join(" , ", testReport.HttpCallsBatchSizes)} ]");
+
+            Assert.Equal(testReport.HttpCallsCount, testReport.HttpCallsBatchSizes.Count);
+            var totalSentEvents = testReport.HttpCallsBatchSizes.Sum(x => x);
+            Assert.Equal(testReport.JsonSerializationsCount, totalSentEvents);
         }
     }
 }

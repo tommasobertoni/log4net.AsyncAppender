@@ -1,9 +1,10 @@
 ﻿using log4net.Core;
+using System.Linq;
 using Moq;
 using Moq.Protected;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Linq;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
@@ -12,6 +13,17 @@ using Xunit.Abstractions;
 
 namespace log4net.Elasticsearch.Async.IntegrationTests
 {
+    internal class TestReport
+    {
+        public int JsonSerializationsCount { get; set; }
+
+        public int ErrorsCount { get; set; }
+
+        public int HttpCallsCount { get; set; }
+
+        public List<int> HttpCallsBatchSizes { get; set; }
+    }
+
     internal class TestToolbox
     {
         public ElasticsearchAsyncAppender Appender { get; private set; }
@@ -25,6 +37,7 @@ namespace log4net.Elasticsearch.Async.IntegrationTests
         private readonly Mock<IEventJsonSerializer> _mockEventJsonSerializer;
         private readonly Mock<HttpClientHandler> _mockHttpMessageHandler;
         private readonly HttpClient _httpClient;
+        private readonly ConcurrentQueue<int> _httpCallsBatchSizes = new ConcurrentQueue<int>();
 
         public TestToolbox(ILog log, ITestOutputHelper output)
         {
@@ -81,7 +94,16 @@ namespace log4net.Elasticsearch.Async.IntegrationTests
                     "SendAsync",
                     ItExpr.IsAny<HttpRequestMessage>(),
                     ItExpr.IsAny<CancellationToken>()
-                ).ReturnsAsync(new HttpResponseMessage
+                ).Callback<HttpRequestMessage, CancellationToken>((request, token) =>
+                {
+                    var stringContent = request.Content as StringContent;
+                    var content = stringContent.ReadAsStringAsync().Result;
+                    var rows = content.Split(Environment.NewLine);
+
+                    var actualLogs = rows.Where(r => r != "{\"index\" : {} }" && !string.IsNullOrWhiteSpace(r)).ToList();
+                    _httpCallsBatchSizes.Enqueue(actualLogs.Count);
+
+                }).ReturnsAsync(new HttpResponseMessage
                 {
                     StatusCode = System.Net.HttpStatusCode.OK,
                     Content = new StringContent(string.Empty)
@@ -90,6 +112,17 @@ namespace log4net.Elasticsearch.Async.IntegrationTests
             _httpClient = new HttpClient(_mockHttpMessageHandler.Object);
 
             #endregion
+        }
+
+        public TestReport GetReport()
+        {
+            return new TestReport
+            {
+                JsonSerializationsCount = _mockEventJsonSerializer.Invocations.Count,
+                ErrorsCount = _mockErrorHandler.Invocations.Count,
+                HttpCallsCount = _mockHttpMessageHandler.Invocations.Count,
+                HttpCallsBatchSizes = _httpCallsBatchSizes.ToList(),
+            };
         }
 
         public void ReplaceConfiguredAppenderWithTestAppender(int processorsCount)
