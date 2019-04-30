@@ -1,4 +1,5 @@
-﻿using System;
+﻿using log4net.Elasticsearch.Async.Helpers;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;

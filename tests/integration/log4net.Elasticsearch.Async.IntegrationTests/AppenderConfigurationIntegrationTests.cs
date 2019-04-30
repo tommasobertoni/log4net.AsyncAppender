@@ -1,4 +1,5 @@
-﻿using System;
+﻿using log4net.Elasticsearch.Async.Helpers;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -26,7 +27,7 @@ namespace log4net.Elasticsearch.Async.IntegrationTests
             // The expected values are those written in the log4net.config file.
 
             var cs = "Scheme=http;User=me;Pwd=pass;Server=myServer.com;Port=9000;Index=anIndex;Routing=aRoute;rolling=true";
-            var ejs = "log4net.Elasticsearch.Async.IntegrationTests.EventJsonSerializer, log4net.Elasticsearch.Async.IntegrationTests";
+            var ejs = "log4net.Elasticsearch.Async.Helpers.EventJsonSerializer, log4net.Elasticsearch.Async.IntegrationTests";
 
             Assert.Equal(10, appender.ProcessorsCount);
             Assert.Equal(1024, appender.MaxBatchSize);

@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace log4net.Elasticsearch.Async.IntegrationTests
+namespace log4net.Elasticsearch.Async.Helpers
 {
     static class ILogExtensions
     {

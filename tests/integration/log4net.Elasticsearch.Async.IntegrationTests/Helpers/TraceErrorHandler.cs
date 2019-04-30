@@ -5,25 +5,28 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace log4net.Elasticsearch.Async.IntegrationTests
+namespace log4net.Elasticsearch.Async.Helpers
 {
     public class TraceErrorHandler : IErrorHandler
     {
         public void Error(string message)
         {
+            Console.WriteLine(message);
             Trace.WriteLine(message);
         }
 
         public void Error(string message, Exception ex)
         {
-            Trace.WriteLine(message);
-            Trace.WriteLine(ex);
+            var x = $"{message}: {ex}";
+            Console.WriteLine(x);
+            Trace.WriteLine(x);
         }
 
         public void Error(string message, Exception ex, ErrorCode errorCode)
         {
-            Trace.WriteLine($"{errorCode} {message}");
-            Trace.WriteLine(ex);
+            var x = $"[{errorCode}] {message}: {ex}";
+            Console.WriteLine(x);
+            Trace.WriteLine(x);
         }
     }
 }

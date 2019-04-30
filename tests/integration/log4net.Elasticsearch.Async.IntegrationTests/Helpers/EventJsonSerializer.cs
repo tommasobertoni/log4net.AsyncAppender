@@ -6,7 +6,7 @@ using log4net.Core;
 using Utf8Json;
 using Utf8Json.Resolvers;
 
-namespace log4net.Elasticsearch.Async.IntegrationTests
+namespace log4net.Elasticsearch.Async.Helpers
 {
     public class EventJsonSerializer : IEventJsonSerializer
     {

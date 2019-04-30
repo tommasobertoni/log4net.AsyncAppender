@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace log4net.Elasticsearch.Async.IntegrationTests
+namespace log4net.Elasticsearch.Async.Helpers
 {
     internal class TestReport
     {

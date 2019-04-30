@@ -20,7 +20,14 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "unit", "unit", "{E87415A2-C
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "integration", "integration", "{3435716D-824F-4939-83E0-3986347C9682}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "log4net.Elasticsearch.Async.IntegrationTests", "tests\integration\log4net.Elasticsearch.Async.IntegrationTests\log4net.Elasticsearch.Async.IntegrationTests.csproj", "{FF699376-5862-4476-AD15-0A942C65CCBD}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "log4net.Elasticsearch.Async.IntegrationTests", "tests\integration\log4net.Elasticsearch.Async.IntegrationTests\log4net.Elasticsearch.Async.IntegrationTests.csproj", "{FF699376-5862-4476-AD15-0A942C65CCBD}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "performance", "performance", "{EB13E2F0-68C3-42C2-B9AA-3BB76E14BF8D}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "nuget", "nuget", "{75979979-FA2B-4DE7-B8B6-35FC7A439E74}"
+	ProjectSection(SolutionItems) = preProject
+		nuget\Pack.bat = nuget\Pack.bat
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -50,6 +57,8 @@ Global
 		{E87415A2-C794-4E24-9D4C-10D256D32FED} = {DEF4E46C-6867-4D51-AE8F-2EED5F115D00}
 		{3435716D-824F-4939-83E0-3986347C9682} = {DEF4E46C-6867-4D51-AE8F-2EED5F115D00}
 		{FF699376-5862-4476-AD15-0A942C65CCBD} = {3435716D-824F-4939-83E0-3986347C9682}
+		{EB13E2F0-68C3-42C2-B9AA-3BB76E14BF8D} = {DEF4E46C-6867-4D51-AE8F-2EED5F115D00}
+		{75979979-FA2B-4DE7-B8B6-35FC7A439E74} = {E6486320-23FF-4C91-8F87-E21C6301EE43}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {66467BAA-DD9B-4D42-90E3-08139FDE8419}
