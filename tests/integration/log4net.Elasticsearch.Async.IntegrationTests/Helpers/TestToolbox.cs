@@ -129,7 +129,7 @@ namespace log4net.Elasticsearch.Async.Helpers
         {
             var appender = new ElasticsearchAsyncAppender
             {
-                ProcessorsCount = processorsCount,
+                MaxProcessorsCount = processorsCount,
                 MaxBatchSize = 512,
                 CloseTimeoutMillis = 5000,
                 EventJsonSerializer = _mockEventJsonSerializer.Object,

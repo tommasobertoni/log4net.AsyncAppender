@@ -17,7 +17,7 @@ namespace log4net.Elasticsearch.Async
     {
         public string ConnectionString { get; set; }
 
-        public int ProcessorsCount { get; set; } = 1;
+        public int MaxProcessorsCount { get; set; } = 3;
 
         public int MaxBatchSize { get; set; } = 512;
 
@@ -58,15 +58,14 @@ namespace log4net.Elasticsearch.Async
             private set { _acceptsLoggingEvents = value; }
         }
 
-        public bool IsProcessing => _processors?.Any(p => p.IsProcessing) ?? false;
+        public bool IsProcessing => _processor?.IsProcessing ?? false;
 
         internal Task RunningJobs { get; private set; }
 
         public AppenderSettings Settings { get; private set; }
 
         private readonly CancellationTokenSource _cts = new CancellationTokenSource();
-        private readonly List<EventsProcessor> _processors = new List<EventsProcessor>();
-        private int _targetProcessorIndex = 0;
+        private EventsProcessor _processor;
 
         public ElasticsearchAsyncAppender()
         {
@@ -95,10 +94,8 @@ namespace log4net.Elasticsearch.Async
                 return;
             }
 
-            var processor = GetTargetProcessor();
-
             foreach (var @event in loggingEvents)
-                processor.Append(@event);
+                _processor.Append(@event);
         }
 
         protected override void Append(LoggingEvent loggingEvent)
@@ -109,8 +106,7 @@ namespace log4net.Elasticsearch.Async
                 return;
             }
 
-            var processor = GetTargetProcessor();
-            processor.Append(loggingEvent);
+            _processor.Append(loggingEvent);
         }
         
         protected override void OnClose()
@@ -122,18 +118,16 @@ namespace log4net.Elasticsearch.Async
             this.AcceptsLoggingEvents = false;
 
             _cts.Cancel();
-            _processors.ForEach(p => p.Dispose());
+            _processor.Dispose();
 
             var closingTimeout = Task.Delay(this.CloseTimeoutMillis);
 
-            var runningJobs = this._processors.Select(p => p.RunningJob);
+            var runningJobs = _processor.ProcessingJobs;
             var runningJobsTermination = Task.WhenAll(runningJobs);
 
             int completedTaskIndex = Task.WaitAny(closingTimeout, runningJobsTermination);
             if (completedTaskIndex == 0)
                 this.ErrorHandler?.Error("Running jobs termination timed out during appender closing.");
-
-            _processors.Clear();
 
             this.Initialized = false;
         }
@@ -142,23 +136,13 @@ namespace log4net.Elasticsearch.Async
 
         ~ElasticsearchAsyncAppender() => this.OnClose();
 
-        private EventsProcessor GetTargetProcessor() => _processors[GetTargetProcessorIndex()];
-
-        private int GetTargetProcessorIndex()
-        {
-            var targetProcessorIndex = Interlocked.Increment(ref _targetProcessorIndex) % _processors.Count;
-            Interlocked.Exchange(ref _targetProcessorIndex, targetProcessorIndex);
-            targetProcessorIndex = _targetProcessorIndex;
-            return targetProcessorIndex;
-        }
-
         private bool TryActivate()
         {
             try
             {
-                if (this.ProcessorsCount < 1)
+                if (this.MaxProcessorsCount < 1)
                 {
-                    this.ErrorHandler?.Error("Processors count must be positive.");
+                    this.ErrorHandler?.Error("Max processors count must be positive.");
                     return false;
                 }
 
@@ -227,22 +211,18 @@ namespace log4net.Elasticsearch.Async
 
             Func<LoggingEvent, string> eventJsonSerializer = GetEventJsonSerializerDelegate();
 
-            for (int i = 0; i < this.ProcessorsCount; i++)
+            _processor = new EventsProcessor(
+                this.HttpClient,
+                Settings.Uri,
+                eventJsonSerializer,
+                maxConcurrentProcessingJobsCount: this.MaxProcessorsCount,
+                _cts.Token)
             {
-                var processor = new EventsProcessor(
-                    this.HttpClient,
-                    Settings.Uri,
-                    eventJsonSerializer,
-                    _cts.Token)
-                {
-                    MaxBatchSize = this.MaxBatchSize,
-                    ExceptionHandler = (ex, events) => this.ErrorHandler?.Error("An error occurred during events processing", ex)
-                };
+                MaxBatchSize = this.MaxBatchSize,
+                ExceptionHandler = (ex, events) => this.ErrorHandler?.Error("An error occurred during events processing", ex)
+            };
 
-                processor.Start();
-
-                _processors.Add(processor);
-            }
+            _processor.Start();
 
             this.Initialized = true;
             this.AcceptsLoggingEvents = true;

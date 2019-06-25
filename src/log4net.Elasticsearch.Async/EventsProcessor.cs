@@ -2,7 +2,6 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Text;
@@ -25,18 +24,17 @@ namespace log4net.Elasticsearch.Async
             }
         }
 
-        private volatile bool _isProcessing;
-        public bool IsProcessing
-        {
-            get { return _isProcessing; }
-            private set { _isProcessing = value; }
-        }
+        public int QueuedEventsCount => _eventsQueue.Count;
 
-        public bool IsRunning => !this.RunningJob.IsCompleted;
+        public bool IsProcessing => _processingJobsCount > 0;
 
-        public Task RunningJob { get; private set; }
+        public IReadOnlyList<Task> ProcessingJobs => _processingJobs.Values.ToList().AsReadOnly();
 
-        private readonly StringBuilder _stringBuilder = new StringBuilder();
+        public bool IsRunning => !_routerJob?.IsCompleted ?? false;
+
+        private volatile int _processingJobsCount;
+        private readonly ConcurrentDictionary<Task, Task> _processingJobs;
+        private Task _routerJob;
 
         private readonly SemaphoreSlim _semaphore = new SemaphoreSlim(0);
         private readonly ConcurrentQueue<LoggingEvent> _eventsQueue = new ConcurrentQueue<LoggingEvent>();
@@ -44,6 +42,7 @@ namespace log4net.Elasticsearch.Async
         private readonly HttpClient _httpClient;
         private readonly Uri _endpoint;
         private readonly Func<LoggingEvent, string> _eventJsonSerializer;
+        private readonly int _maxConcurrentProcessingJobsCount;
         private readonly CancellationToken _cancellationToken;
 
         private readonly CancellationTokenSource _disposeCancellationTokenSource;
@@ -52,11 +51,13 @@ namespace log4net.Elasticsearch.Async
             HttpClient httpClient,
             Uri endpoint,
             Func<LoggingEvent, string> eventJsonFormatter,
+            int maxConcurrentProcessingJobsCount,
             CancellationToken cancellationToken)
         {
             _httpClient = httpClient;
             _endpoint = endpoint;
             _eventJsonSerializer = eventJsonFormatter;
+            _maxConcurrentProcessingJobsCount = maxConcurrentProcessingJobsCount;
 
             _disposeCancellationTokenSource = new CancellationTokenSource();
             var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(
@@ -64,8 +65,7 @@ namespace log4net.Elasticsearch.Async
 
             _cancellationToken = linkedCts.Token;
 
-            this.RunningJob = Task.CompletedTask;
-            this.IsProcessing = false;
+            _processingJobs = new ConcurrentDictionary<Task, Task>();
         }
 
         public void Append(LoggingEvent @event)
@@ -76,18 +76,18 @@ namespace log4net.Elasticsearch.Async
 
         public void Start()
         {
-            if (this.RunningJob != null && !this.RunningJob.IsCompleted)
+            if (_routerJob != null && !_routerJob.IsCompleted)
                 throw new InvalidOperationException("The processor is already running.");
 
-            this.RunningJob = Task.Factory.StartNew(
-                DoProcessAsync,
+            _routerJob = Task.Factory.StartNew(
+                WaitForEventsAsync,
                 _cancellationToken,
                 TaskCreationOptions.LongRunning,
                 TaskScheduler.Current)
-                .Result /* get the DoProcessAsync task */ ;
+                .Result /* get the WaitForEventsAsync task */;
         }
 
-        private async Task DoProcessAsync()
+        private async Task WaitForEventsAsync()
         {
             var eventsBuffer = new List<LoggingEvent>(this.MaxBatchSize /* initial capacity */);
 
@@ -97,27 +97,36 @@ namespace log4net.Elasticsearch.Async
 
                 await DequeueIntoBufferAsync(eventsBuffer).ConfigureAwait(false);
 
-                if (eventsBuffer.Any())
+                if (eventsBuffer.Any() && !_cancellationToken.IsCancellationRequested)
                 {
-                    this.IsProcessing = true;
+                    Interlocked.Increment(ref _processingJobsCount);
 
-                    try
+                    if (_processingJobs.Count >= _maxConcurrentProcessingJobsCount)
                     {
-                        var json = SerializeToJson(eventsBuffer);
-                        var baseRequest = CreateBaseRequest();
-                        baseRequest.Content = new StringContent(json, Encoding.UTF8, "application/json");
-                        // Don't use the cancellation token here, allow the last events to flush.
-                        var response = await _httpClient.SendAsync(baseRequest, CancellationToken.None).ConfigureAwait(false);
-                        response.EnsureSuccessStatusCode();
+                        System.Diagnostics.Debug.WriteLine("Wait for a job to finish");
+                        // Wait for a task to complete.
+                        var _ = await Task.WhenAny(this.ProcessingJobs).ConfigureAwait(false);
                     }
-                    catch (Exception ex)
-                    {
-                        this.ExceptionHandler?.Invoke(ex, new List<LoggingEvent>(eventsBuffer));
-                    }
+
+                    var eventsToProcess = new List<LoggingEvent>(eventsBuffer);
+
+                    Task processingTask = null;
+                    processingTask = Task.Factory.StartNew(
+                        async () =>
+                        {
+                            await DoProcessAsync(eventsToProcess);
+                            Interlocked.Decrement(ref _processingJobsCount);
+                            _processingJobs.TryRemove(processingTask, out var _);
+                        },
+                        _cancellationToken,
+                        TaskCreationOptions.LongRunning,
+                        TaskScheduler.Current);
+
+                    _processingJobs.TryAdd(processingTask, processingTask);
+
+                    System.Diagnostics.Debug.WriteLine($"Started new job with {eventsToProcess.Count} logs, current count: {_processingJobsCount}");
 
                     eventsBuffer.Clear();
-
-                    this.IsProcessing = false;
                 }
             }
 
@@ -136,14 +145,35 @@ namespace log4net.Elasticsearch.Async
 
                     } while (
                         !_eventsQueue.IsEmpty &&
-                        buffer.Count <= this.MaxBatchSize &&
+                        buffer.Count < this.MaxBatchSize &&
                         !_cancellationToken.IsCancellationRequested);
+
+                    if (_eventsQueue.IsEmpty) System.Diagnostics.Debug.WriteLine("Buffer completed reason: empty queue");
+                    if (buffer.Count >= this.MaxBatchSize) System.Diagnostics.Debug.WriteLine("Buffer completed reason: max batch size reached");
+                    if (_cancellationToken.IsCancellationRequested) System.Diagnostics.Debug.WriteLine("Buffer completed reason: cancellation requested");
                 }
                 catch (OperationCanceledException)
                 {
                     // The cancellation token has been canceled.
                     // Continue execution and flush the last dequeue events.
                 }
+            }
+        }
+
+        private async Task DoProcessAsync(List<LoggingEvent> events)
+        {
+            try
+            {
+                var json = SerializeToJson(events);
+                var baseRequest = CreateBaseRequest();
+                baseRequest.Content = new StringContent(json, Encoding.UTF8, "application/json");
+                // Don't use the cancellation token here, allow the last events to flush.
+                var response = await _httpClient.SendAsync(baseRequest, CancellationToken.None).ConfigureAwait(false);
+                response.EnsureSuccessStatusCode();
+            }
+            catch (Exception ex)
+            {
+                this.ExceptionHandler?.Invoke(ex, events);
             }
         }
 
@@ -162,16 +192,14 @@ namespace log4net.Elasticsearch.Async
 
         private string SerializeToJson(List<LoggingEvent> eventsBuffer)
         {
-            _stringBuilder.Clear();
+            var sb = new StringBuilder();
 
             if (eventsBuffer.Count != 1)
-                _stringBuilder.AppendLine("{\"index\" : {} }");
+                sb.AppendLine("{\"index\" : {} }");
 
-            eventsBuffer.ForEach(e => _stringBuilder.AppendLine(_eventJsonSerializer(e)));
+            eventsBuffer.ForEach(e => sb.AppendLine(_eventJsonSerializer(e)));
 
-            var json = _stringBuilder.ToString();
-            _stringBuilder.Clear();
-
+            var json = sb.ToString();
             return json;
         }
 
@@ -179,6 +207,8 @@ namespace log4net.Elasticsearch.Async
         {
             _disposeCancellationTokenSource.Cancel();
             _semaphore.Dispose();
+
+            Task.WhenAll(this.ProcessingJobs);
         }
     }
 }

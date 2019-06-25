@@ -29,7 +29,7 @@ namespace log4net.Elasticsearch.Async.IntegrationTests
             var cs = "Scheme=http;User=me;Pwd=pass;Server=myServer.com;Port=9000;Index=anIndex;Routing=aRoute;rolling=true";
             var ejs = "log4net.Elasticsearch.Async.Helpers.EventJsonSerializer, log4net.Elasticsearch.Async.IntegrationTests";
 
-            Assert.Equal(10, appender.ProcessorsCount);
+            Assert.Equal(10, appender.MaxProcessorsCount);
             Assert.Equal(1024, appender.MaxBatchSize);
             Assert.Equal(15000, appender.CloseTimeoutMillis);
             Assert.NotNull(appender.ErrorHandler);

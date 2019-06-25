@@ -50,12 +50,17 @@ namespace log4net.Elasticsearch.Async.IntegrationTests
             _log.Info("test");
             _toolbox.LogsCount += 1;
 
-            var testTimeoutTask = Task.Delay(5000);
+            var processingStartedTask = new ProcessingStartedTask(_toolbox.Appender).AsTask();
+            await processingStartedTask;
+
+            var testTimeoutTask = GetTimeoutTask();
             var processingTerminationTask = new ProcessingTerminationTask(_toolbox.Appender).AsTask();
             var completedTask = await Task.WhenAny(testTimeoutTask, processingTerminationTask);
 
             if (completedTask == testTimeoutTask)
                 Assert.True(false, $"Timed out.");
+
+            _toolbox.VerifyLogsCount();
         }
 
         #endregion
@@ -81,7 +86,7 @@ namespace log4net.Elasticsearch.Async.IntegrationTests
         [Fact]
         public async Task Logs_are_processed_with_many_processors()
         {
-            _toolbox.ReplaceConfiguredAppenderWithTestAppender(processorsCount: 10);
+            _toolbox.ReplaceConfiguredAppenderWithTestAppender(processorsCount: 100);
             var loggedEventsCount = (_toolbox.Appender.MaxBatchSize * 50) + 1;
             await Test_Logs_are_processed(loggedEventsCount, nameof(Logs_are_processed_with_many_processors));
         }
@@ -93,7 +98,10 @@ namespace log4net.Elasticsearch.Async.IntegrationTests
             for (int i = 0; i < loggedEventsCount; i++) _log.Info("test");
             _toolbox.LogsCount += loggedEventsCount;
 
-            var testTimeoutTask = Task.Delay(5000);
+            var processingStartedTask = new ProcessingStartedTask(_toolbox.Appender).AsTask();
+            await processingStartedTask;
+
+            var testTimeoutTask = GetTimeoutTask();
             var processingTerminationTask = new ProcessingTerminationTask(_toolbox.Appender).AsTask();
             var resultingTask = await Task.WhenAny(testTimeoutTask, processingTerminationTask);
 
@@ -120,7 +128,7 @@ namespace log4net.Elasticsearch.Async.IntegrationTests
             _toolbox.ReplaceConfiguredAppenderWithTestAppender(processorsCount: 1);
             // Only in this case, with only one processor, the logs are usually too many to be serialized
             // and sent before the test finishes.
-            await Test_Some_logs_are_processed(allallowZeroHttpCallswZero: true);
+            await Test_Some_logs_are_processed(allowZeroHttpCallswZero: true);
         }
 
         [Fact]
@@ -137,7 +145,7 @@ namespace log4net.Elasticsearch.Async.IntegrationTests
             await Test_Some_logs_are_processed();
         }
 
-        private async Task Test_Some_logs_are_processed(bool allallowZeroHttpCallswZero = false)
+        private async Task Test_Some_logs_are_processed(bool allowZeroHttpCallswZero = false)
         {
             int n = (_toolbox.Appender.MaxBatchSize * 30) + 1;
             for (int i = 0; i < n; i++) _log.Info("test");
@@ -147,7 +155,7 @@ namespace log4net.Elasticsearch.Async.IntegrationTests
             // but don't wait the full processing to complete.
             await Task.Delay(_toolbox.Appender.MaxBatchSize);
 
-            _toolbox.VerifyPartialLogsCount(allallowZeroHttpCallswZero);
+            _toolbox.VerifyPartialLogsCount(allowZeroHttpCallswZero);
         }
 
         #endregion
@@ -166,6 +174,11 @@ namespace log4net.Elasticsearch.Async.IntegrationTests
             Assert.Equal(testReport.HttpCallsCount, testReport.HttpCallsBatchSizes.Count);
             var totalSentEvents = testReport.HttpCallsBatchSizes.Sum(x => x);
             Assert.Equal(testReport.JsonSerializationsCount, totalSentEvents);
+        }
+
+        private Task GetTimeoutTask()
+        {
+            return Task.Delay(System.Diagnostics.Debugger.IsAttached ? int.MaxValue : 2_000);
         }
     }
 }
