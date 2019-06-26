@@ -2,17 +2,24 @@
 <package >
   <metadata>
     <id>log4net.AsyncAppender</id>
-    <version>0.1.1-beta1</version>
+    <version>0.2.0-beta2</version>
     <title>log4net.AsyncAppender</title>
     <authors>Tommaso Bertoni</authors>
     <owners>tommasobertoni</owners>
     <license type="expression">MIT</license>
     <projectUrl>https://github.com/tommasobertoni/log4net.Elasticsearch.Async/blob/master/README.md</projectUrl>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <summary>A fast and asynchronous Elasticsearch appender for log4net.</summary>
     <description>A fast and asynchronous Elasticsearch appender for log4net.</description>
-    <summary>This is a beta version.</summary>
+    <releaseNotes>Improved tasks usage with single listener and mutiple processor tasks.</releaseNotes>
     <repository type="git" url="https://github.com/tommasobertoni/log4net.Elasticsearch.Async" />
     <copyright>Copyright 2019</copyright>
-    <tags>log4net elasticsearch netstandard logging</tags>
+    <language>en-US</language>
+    <tags>log4net elasticsearch netstandard netstandard20 logging</tags>
+    <dependencies>
+      <group targetFramework=".NETStandard2.0">
+        <dependency id="log4net" version="[2.0,3.0)" />
+      </group>
+    </dependencies>
   </metadata>
 </package>
