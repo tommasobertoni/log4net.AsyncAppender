@@ -4,6 +4,7 @@ using Moq;
 using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Tests
@@ -20,7 +21,7 @@ namespace Tests
         {
             var appenderMock = new Mock<AsyncAppender> { CallBase = true };
 
-            appenderMock.Setup(x => x.ProcessAsync(It.IsAny<List<LoggingEvent>>()))
+            appenderMock.Setup(x => x.ProcessAsync(It.IsAny<List<LoggingEvent>>(), It.IsAny<CancellationToken>()))
                 .Returns(Task.CompletedTask);
 
             var appender = appenderMock.Object;

@@ -93,7 +93,7 @@ namespace log4net.AsyncAppender
             }
             catch (Exception ex)
             {
-                this.ErrorHandler?.Error("Error during activation", ex);
+                this.ErrorHandler?.Error("Error during validation", ex);
                 return false;
             }
 

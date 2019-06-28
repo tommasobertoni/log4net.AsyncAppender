@@ -148,7 +148,7 @@ namespace log4net.AsyncAppender
             catch (OperationCanceledException)
             {
                 // The cancellation token has been canceled.
-                // Continue execution and flush the last dequeue events.
+                // Continue execution and flush the last dequeued events.
             }
         }
 
