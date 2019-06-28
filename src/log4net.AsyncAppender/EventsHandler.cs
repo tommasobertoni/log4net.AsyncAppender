@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace log4net.AsyncAppender
 {
-    public delegate Task ProcessAsync(List<LoggingEvent> events);
+    public delegate Task ProcessAsync(List<LoggingEvent> events, CancellationToken cancellationToken);
 
     internal class EventsHandler : IDisposable
     {
@@ -119,7 +119,7 @@ namespace log4net.AsyncAppender
 
             processingTask = Task.Factory.StartNew(async () =>
             {
-                await _processAsyncDelegate(eventsToProcess).ConfigureAwait(false);
+                await _processAsyncDelegate(eventsToProcess, _cancellationToken).ConfigureAwait(false);
 
                 Interlocked.Decrement(ref _processorsCount);
                 _processors.TryRemove(processingTask, out var _);

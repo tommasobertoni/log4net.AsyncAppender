@@ -2,7 +2,7 @@
 <package >
   <metadata>
     <id>log4net.AsyncAppender</id>
-    <version>0.4.0-beta4</version>
+    <version>0.4.2</version>
     <title>log4net.AsyncAppender</title>
     <authors>Tommaso Bertoni</authors>
     <owners>tommasobertoni</owners>
@@ -20,14 +20,14 @@ The configuration enables to specify:
 
 Runtime setup of the appender instance is enabled using the contract IAsyncAppenderConfigurator.
     </description>
-    <releaseNotes>Moved ElasticSearch appender to its own package.</releaseNotes>
+    <releaseNotes>Added missing CancellationToken.</releaseNotes>
     <repository type="git" url="https://github.com/tommasobertoni/log4net.AsyncAppender" />
     <copyright>Copyright 2019</copyright>
     <language>en-US</language>
     <tags>log4net netstandard netstandard20 logging async concurrent</tags>
     <dependencies>
       <group targetFramework=".NETStandard2.0">
-        <dependency id="log4net" version="[2.0,3.0)" />
+        <dependency id="log4net" version="[2.0.8,3.0)" />
       </group>
     </dependencies>
   </metadata>

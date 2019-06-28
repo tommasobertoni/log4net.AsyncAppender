@@ -41,7 +41,7 @@ namespace log4net.AsyncAppender
             this.AcceptsLoggingEvents = false;
         }
 
-        protected internal abstract Task ProcessAsync(List<LoggingEvent> events);
+        protected internal abstract Task ProcessAsync(List<LoggingEvent> events, CancellationToken cancellationToken);
 
         #region Setup
 
