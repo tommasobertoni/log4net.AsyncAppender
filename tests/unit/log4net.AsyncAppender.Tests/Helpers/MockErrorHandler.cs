@@ -13,6 +13,10 @@ namespace Tests
 
         public void Error(string message, Exception e) => this.Error(message, e, ErrorCode.GenericFailure);
 
-        public void Error(string message, Exception e, ErrorCode errorCode) => this.ErrorsCount++;        
+        public void Error(string message, Exception e, ErrorCode errorCode)
+        {
+            NUnit.Framework.TestContext.Out.WriteLine(message);
+            this.ErrorsCount++;
+        }
     }
 }
