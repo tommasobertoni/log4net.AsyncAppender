@@ -26,11 +26,9 @@ namespace log4net.AsyncAppender
 
         public bool AcceptsLoggingEvents { get; protected set; }
 
-        public virtual bool IsProcessing => _handler?.IsProcessing ?? false;
+        public bool IsProcessing => _handler?.IsProcessing ?? false;
 
         #endregion
-
-        protected Task RunningProcessors { get; set; }
 
         private readonly CancellationTokenSource _cts = new CancellationTokenSource();
         private EventsHandler _handler;
@@ -41,7 +39,7 @@ namespace log4net.AsyncAppender
             this.AcceptsLoggingEvents = false;
         }
 
-        protected internal abstract Task ProcessAsync(List<LoggingEvent> events, CancellationToken cancellationToken);
+        protected abstract Task ProcessAsync(IReadOnlyList<LoggingEvent> events, CancellationToken cancellationToken);
 
         #region Setup
 
@@ -57,7 +55,7 @@ namespace log4net.AsyncAppender
             }
         }
 
-        protected internal virtual void Configure()
+        protected virtual void Configure()
         {
             try
             {
@@ -69,7 +67,7 @@ namespace log4net.AsyncAppender
             }
         }
 
-        protected internal virtual bool ValidateSelf()
+        protected virtual bool ValidateSelf()
         {
             try
             {
@@ -100,7 +98,7 @@ namespace log4net.AsyncAppender
             return true;
         }
 
-        protected internal virtual void Activate()
+        protected virtual void Activate()
         {
             _handler = new EventsHandler(
                 this.ProcessAsync,
@@ -171,6 +169,16 @@ namespace log4net.AsyncAppender
 
             this.Activated = false;
         }
+
+        #endregion
+
+        #region State changed
+
+        public Task ProcessingStarted() =>
+            _handler?.ProcessingStarted() ?? throw new Exception("Appender was not activated");
+
+        public Task ProcessingTerminated() =>
+            _handler?.ProcessingTerminated() ?? throw new Exception("Appender was not activated");
 
         #endregion
     }

@@ -9,21 +9,19 @@ using System.Threading.Tasks;
 
 namespace log4net.AsyncAppender
 {
-    public delegate Task ProcessAsync(List<LoggingEvent> events, CancellationToken cancellationToken);
+    public delegate Task ProcessAsync(IReadOnlyList<LoggingEvent> events, CancellationToken cancellationToken);
 
     internal class EventsHandler : IDisposable
     {
         #region Properties
 
-        public Action<Exception, List<LoggingEvent>> ErrorHandler { get; set; }
+        public Action<Exception, IReadOnlyList<LoggingEvent>> ErrorHandler { get; set; }
 
         public int QueuedEventsCount => _eventsQueue.Count;
 
-        public bool IsProcessing => _processorsCount > 0;
+        public bool IsProcessing => _processingAsyncManualResetEvent.IsSet;
 
         public IReadOnlyList<Task> Processors => _processors.Values.ToList().AsReadOnly();
-
-        public bool IsRunning => !_router?.IsCompleted ?? false;
 
         #endregion
 
@@ -31,8 +29,11 @@ namespace log4net.AsyncAppender
         private readonly ConcurrentQueue<LoggingEvent> _eventsQueue = new ConcurrentQueue<LoggingEvent>();
         private readonly CancellationTokenSource _disposeCancellationTokenSource;
 
-        private volatile int _processorsCount;
+        private readonly AsyncManualResetEvent _processingAsyncManualResetEvent;
+        private readonly AsyncManualResetEvent _idleAsyncManualResetEvent;
+
         private readonly ConcurrentDictionary<Task, Task> _processors;
+        private List<LoggingEvent> _eventsBuffer;
         private Task _router;
 
         private readonly ProcessAsync _processAsyncDelegate;
@@ -57,6 +58,9 @@ namespace log4net.AsyncAppender
                 cancellationToken, _disposeCancellationTokenSource.Token).Token;
 
             _processors = new ConcurrentDictionary<Task, Task>();
+
+            _processingAsyncManualResetEvent = new AsyncManualResetEvent(set: false);
+            _idleAsyncManualResetEvent = new AsyncManualResetEvent(set: true);
         }
 
         public void Handle(LoggingEvent @event)
@@ -83,32 +87,38 @@ namespace log4net.AsyncAppender
             if (_router != null && !_router.IsCompleted)
                 throw new InvalidOperationException("The handler is already running.");
 
+            _eventsBuffer = new List<LoggingEvent>(_maxBatchSize /* initial capacity */);
+
             _router = Task.Factory.StartNew(
                 WaitForEventsAsync, _cancellationToken, TaskCreationOptions.LongRunning, TaskScheduler.Current)
                 .Result /* get the WaitForEventsAsync task */;
         }
 
+        #region Processing state
+
+        public Task ProcessingStarted() => _processingAsyncManualResetEvent.WaitAsync();
+
+        public Task ProcessingTerminated() => _idleAsyncManualResetEvent.WaitAsync();
+
+        #endregion
+
         private async Task WaitForEventsAsync()
         {
-            var eventsBuffer = new List<LoggingEvent>(_maxBatchSize /* initial capacity */);
-
             while (!_cancellationToken.IsCancellationRequested)
             {
-                await DequeueIntoBufferAsync(eventsBuffer).ConfigureAwait(false);
+                await DequeueIntoBufferAsync(_eventsBuffer).ConfigureAwait(false);
 
-                if (eventsBuffer.Any() && !_cancellationToken.IsCancellationRequested)
+                if (_eventsBuffer.Any() && !_cancellationToken.IsCancellationRequested)
                 {
-                    var eventsToProcess = new List<LoggingEvent>(eventsBuffer);
+                    var eventsToProcess = new List<LoggingEvent>(_eventsBuffer);
                     await this.RegisterBufferProcessorAsync(eventsToProcess).ConfigureAwait(false);
-                    eventsBuffer.Clear();
+                    _eventsBuffer.Clear();
                 }
             }
         }
 
         private async Task RegisterBufferProcessorAsync(List<LoggingEvent> eventsToProcess)
         {
-            Interlocked.Increment(ref _processorsCount);
-
             if (_processors.Count >= _maxConcurrentProcessorsCount)
             {
                 // Wait for a task to complete.
@@ -117,14 +127,25 @@ namespace log4net.AsyncAppender
 
             Task processingTask = null;
 
-            processingTask = Task.Factory.StartNew(async () =>
+            processingTask = Task.Run(async () =>
             {
-                await _processAsyncDelegate(eventsToProcess, _cancellationToken).ConfigureAwait(false);
+                try
+                {
+                    await _processAsyncDelegate(eventsToProcess.AsReadOnly(), _cancellationToken).ConfigureAwait(false);
+                    _processors.TryRemove(processingTask, out var _);
 
-                Interlocked.Decrement(ref _processorsCount);
-                _processors.TryRemove(processingTask, out var _);
+                    if (_eventsQueue.IsEmpty && _processors.IsEmpty && _eventsBuffer.Count == 0)
+                    {
+                        _processingAsyncManualResetEvent.Reset();
+                        _idleAsyncManualResetEvent.Set();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    this.ErrorHandler?.Invoke(ex, eventsToProcess);
+                }
 
-            }, _cancellationToken, TaskCreationOptions.LongRunning, TaskScheduler.Current);
+            }, _cancellationToken);
 
             _processors.TryAdd(processingTask, processingTask);
         }
@@ -136,9 +157,15 @@ namespace log4net.AsyncAppender
                 do
                 {
                     await _semaphore.WaitAsync(_cancellationToken).ConfigureAwait(false);
+
                     bool dequeued = _eventsQueue.TryDequeue(out var @event);
+
                     if (dequeued && @event != null)
+                    {
                         buffer.Add(@event);
+                        _processingAsyncManualResetEvent.Set();
+                        _idleAsyncManualResetEvent.Reset();
+                    }
 
                 } while (
                     !_eventsQueue.IsEmpty &&
@@ -149,6 +176,10 @@ namespace log4net.AsyncAppender
             {
                 // The cancellation token has been canceled.
                 // Continue execution and flush the last dequeued events.
+            }
+            catch (Exception ex)
+            {
+                this.ErrorHandler?.Invoke(ex, buffer);
             }
         }
 
