@@ -2,7 +2,7 @@
 <package >
   <metadata>
     <id>log4net.AsyncAppender</id>
-    <version>0.4.2-preview</version>
+    <version>0.4.3-preview</version>
     <title>log4net.AsyncAppender</title>
     <authors>Tommaso Bertoni</authors>
     <owners>tommasobertoni</owners>
@@ -20,7 +20,7 @@ The configuration enables to specify:
 
 Runtime setup of the appender instance is enabled using the contract IAsyncAppenderConfigurator.
     </description>
-    <releaseNotes>Added missing CancellationToken.</releaseNotes>
+    <releaseNotes>Fixed concurrent completion trigger.</releaseNotes>
     <repository type="git" url="https://github.com/tommasobertoni/log4net.AsyncAppender" />
     <copyright>Copyright 2019</copyright>
     <language>en-US</language>
