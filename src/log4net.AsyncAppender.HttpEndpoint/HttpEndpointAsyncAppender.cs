@@ -190,7 +190,7 @@ namespace log4net.AsyncAppender
             return uriBuilder.Uri;
         }
 
-        protected override async Task ProcessAsync(List<LoggingEvent> events, CancellationToken cancellationToken)
+        protected override async Task ProcessAsync(IReadOnlyList<LoggingEvent> events, CancellationToken cancellationToken)
         {
             try
             {
@@ -245,7 +245,7 @@ namespace log4net.AsyncAppender
         }
 
         protected virtual Task HandleUnsuccessfulResponseAsync(
-            List<LoggingEvent> eventsSent,
+            IReadOnlyList<LoggingEvent> eventsSent,
             HttpRequestMessage request,
             HttpResponseMessage response,
             CancellationToken cancellationToken) => Task.CompletedTask;
@@ -257,6 +257,6 @@ namespace log4net.AsyncAppender
                 : this.EventJsonSerializerDelegate(@event);
         }
 
-        protected abstract Task<HttpContent> GetHttpContentAsync(List<LoggingEvent> events);
+        protected abstract Task<HttpContent> GetHttpContentAsync(IReadOnlyList<LoggingEvent> events);
     }
 }

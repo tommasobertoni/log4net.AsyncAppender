@@ -2,7 +2,7 @@
 <package >
   <metadata>
     <id>log4net.AsyncAppender.HttpEndpoint</id>
-    <version>0.1.0</version>
+    <version>0.1.1-preview</version>
     <title>log4net.AsyncAppender.HttpEndpoint</title>
     <authors>Tommaso Bertoni</authors>
     <owners>tommasobertoni</owners>
@@ -16,13 +16,14 @@ of an http endpoint and provides an HttpClient instance and methods to create an
 An IEventJsonSerializer contract is provided in order to enable plugging in a custom json serializer (if needed).
 Without a custom serializer, this package falls back on using the Utf8Json library, when json serialization is requested.
     </description>
+    <releaseNotes>Updated log4net.AsyncAppender dependency.</releaseNotes>
     <repository type="git" url="https://github.com/tommasobertoni/log4net.AsyncAppender" />
     <copyright>Copyright 2019</copyright>
     <language>en-US</language>
     <tags>log4net netstandard netstandard20 logging async concurrent</tags>
     <dependencies>
       <group targetFramework=".NETStandard2.0">
-        <dependency id="log4net.AsyncAppender" version="0.4.2" />
+        <dependency id="log4net.AsyncAppender" version="0.4.3-preview" />
         <dependency id="Utf8Json" version="1.3.7" />
       </group>
     </dependencies>
