@@ -2,7 +2,7 @@
 <package >
   <metadata>
     <id>log4net.AsyncAppender</id>
-    <version>0.4.2</version>
+    <version>0.4.2-preview</version>
     <title>log4net.AsyncAppender</title>
     <authors>Tommaso Bertoni</authors>
     <owners>tommasobertoni</owners>

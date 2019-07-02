@@ -23,7 +23,13 @@ namespace log4net.AsyncAppender
 
         public IReadOnlyList<Task> Processors => _processors.Values.ToList().AsReadOnly();
 
+        public int MaxConcurrentProcessorsCount { get; }
+
+        public int MaxBatchSize { get; }
+
         #endregion
+
+        private readonly object _syncCompletion = new object();
 
         private readonly SemaphoreSlim _semaphore = new SemaphoreSlim(0);
         private readonly ConcurrentQueue<LoggingEvent> _eventsQueue = new ConcurrentQueue<LoggingEvent>();
@@ -32,13 +38,13 @@ namespace log4net.AsyncAppender
         private readonly AsyncManualResetEvent _processingAsyncManualResetEvent;
         private readonly AsyncManualResetEvent _idleAsyncManualResetEvent;
 
+        private long _processorsCount;
         private readonly ConcurrentDictionary<Task, Task> _processors;
         private List<LoggingEvent> _eventsBuffer;
         private Task _router;
 
         private readonly ProcessAsync _processAsyncDelegate;
-        private readonly int _maxConcurrentProcessorsCount;
-        private readonly int _maxBatchSize;
+        private readonly SemaphoreSlim _processorSlotsSemaphore;
 
         private readonly CancellationToken _cancellationToken;
 
@@ -49,8 +55,11 @@ namespace log4net.AsyncAppender
             CancellationToken cancellationToken = default)
         {
             _processAsyncDelegate = processAsyncDelegate;
-            _maxConcurrentProcessorsCount = maxConcurrentProcessorsCount;
-            _maxBatchSize = maxBatchSize;
+
+            this.MaxConcurrentProcessorsCount = maxConcurrentProcessorsCount;
+            this.MaxBatchSize = maxBatchSize;
+
+            _processorSlotsSemaphore = new SemaphoreSlim(maxConcurrentProcessorsCount, maxConcurrentProcessorsCount);
 
             _disposeCancellationTokenSource = new CancellationTokenSource();
 
@@ -87,7 +96,7 @@ namespace log4net.AsyncAppender
             if (_router != null && !_router.IsCompleted)
                 throw new InvalidOperationException("The handler is already running.");
 
-            _eventsBuffer = new List<LoggingEvent>(_maxBatchSize /* initial capacity */);
+            _eventsBuffer = new List<LoggingEvent>(capacity: this.MaxBatchSize);
 
             _router = Task.Factory.StartNew(
                 WaitForEventsAsync, _cancellationToken, TaskCreationOptions.LongRunning, TaskScheduler.Current)
@@ -111,43 +120,58 @@ namespace log4net.AsyncAppender
                 if (_eventsBuffer.Any() && !_cancellationToken.IsCancellationRequested)
                 {
                     var eventsToProcess = new List<LoggingEvent>(_eventsBuffer);
-                    await this.RegisterBufferProcessorAsync(eventsToProcess).ConfigureAwait(false);
                     _eventsBuffer.Clear();
+
+                    var processorTask = await this.StartNewProcessorAsync(eventsToProcess);
+                    _processors.TryAdd(processorTask, processorTask);
+
+                    var _ = processorTask.ContinueWith(NotifyCompletion, TaskContinuationOptions.ExecuteSynchronously);
                 }
             }
         }
 
-        private async Task RegisterBufferProcessorAsync(List<LoggingEvent> eventsToProcess)
+        private async Task<Task> StartNewProcessorAsync(List<LoggingEvent> eventsToProcess)
         {
-            if (_processors.Count >= _maxConcurrentProcessorsCount)
-            {
-                // Wait for a task to complete.
-                var _ = await Task.WhenAny(this.Processors).ConfigureAwait(false);
-            }
+            Interlocked.Increment(ref _processorsCount);
 
-            Task processingTask = null;
+            // Wait for a processing slot (these define how many concurrent processors can run at a time).
+            await _processorSlotsSemaphore.WaitAsync(_cancellationToken).ConfigureAwait(false);
 
-            processingTask = Task.Run(async () =>
+            var processorTask = Task.Run(async () =>
             {
                 try
                 {
                     await _processAsyncDelegate(eventsToProcess.AsReadOnly(), _cancellationToken).ConfigureAwait(false);
-                    _processors.TryRemove(processingTask, out var _);
-
-                    if (_eventsQueue.IsEmpty && _processors.IsEmpty && _eventsBuffer.Count == 0)
-                    {
-                        _processingAsyncManualResetEvent.Reset();
-                        _idleAsyncManualResetEvent.Set();
-                    }
                 }
                 catch (Exception ex)
                 {
                     this.ErrorHandler?.Invoke(ex, eventsToProcess);
                 }
+                finally
+                {
+                    _processorSlotsSemaphore.Release(); // Release the slot just used.
+                }
 
             }, _cancellationToken);
 
-            _processors.TryAdd(processingTask, processingTask);
+            return processorTask;
+        }
+
+        private void NotifyCompletion(Task processorTask)
+        {
+            Interlocked.Decrement(ref _processorsCount);
+            _processors.TryRemove(processorTask, out var _);
+
+            lock (_syncCompletion)
+            {
+                if (_eventsQueue.IsEmpty &&
+                    _eventsBuffer.Count == 0 &&
+                    Interlocked.Read(ref _processorsCount) == 0)
+                {
+                    _processingAsyncManualResetEvent.Reset();
+                    _idleAsyncManualResetEvent.Set();
+                }
+            }
         }
 
         private async Task DequeueIntoBufferAsync(List<LoggingEvent> buffer)
@@ -167,10 +191,7 @@ namespace log4net.AsyncAppender
                         _idleAsyncManualResetEvent.Reset();
                     }
 
-                } while (
-                    !_eventsQueue.IsEmpty &&
-                    buffer.Count < _maxBatchSize &&
-                    !_cancellationToken.IsCancellationRequested);
+                } while (KeepBuffering());
             }
             catch (OperationCanceledException)
             {
@@ -180,6 +201,19 @@ namespace log4net.AsyncAppender
             catch (Exception ex)
             {
                 this.ErrorHandler?.Invoke(ex, buffer);
+            }
+
+            // Local functions
+
+            bool KeepBuffering()
+            {
+                if (_eventsQueue.IsEmpty) return false;
+
+                if (buffer.Count >= this.MaxBatchSize) return false;
+
+                if (_cancellationToken.IsCancellationRequested) return false;
+
+                return true;
             }
         }
 
