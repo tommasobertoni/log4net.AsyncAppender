@@ -19,9 +19,4 @@ namespace Tests
             this.InvocationsCount++;
         }
     }
-
-    internal class ChangeAppenderNameConfigurator : IAsyncAppenderConfigurator
-    {
-        public void Configure(AsyncAppender appender) => appender.Name = Guid.NewGuid().ToString();
-    }
 }

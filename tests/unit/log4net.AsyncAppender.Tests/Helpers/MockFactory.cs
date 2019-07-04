@@ -3,33 +3,51 @@ using log4net.Core;
 using Moq;
 using System;
 using System.Collections.Generic;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
+using System.Diagnostics;
+using System.Linq;
 
 namespace Tests
 {
     internal static class MockFactory
     {
-        public static AsyncAppender GetAnAppender()
+        public static TestableAsyncAppender GetAnAppender()
         {
             var (appender, _) = GetAnAppenderWithErrorHandler();
             return appender;
         }
 
-        public static (AsyncAppender, MockErrorHandler) GetAnAppenderWithErrorHandler()
+        public static (TestableAsyncAppender, MockErrorHandler) GetAnAppenderWithErrorHandler()
         {
-            var appenderMock = new Mock<AsyncAppender> { CallBase = true };
+            var appender = new TestableAsyncAppender();
 
-            appenderMock.Setup(x => x.ProcessAsync(It.IsAny<List<LoggingEvent>>(), It.IsAny<CancellationToken>()))
-                .Returns(Task.CompletedTask);
-
-            var appender = appenderMock.Object;
+            if (Debugger.IsAttached)
+            {
+                Trace.AutoFlush = true;
+                appender.Trace = Debugger.IsAttached;
+                EnsureTraceListenerExists();
+            }
 
             var mockErrorHandler = new MockErrorHandler();
             appender.ErrorHandler = mockErrorHandler;
 
             return (appender, mockErrorHandler);
+        }
+
+        public static TestTraceListener GetCurrentTestTraceListener()
+        {
+            var existingTraceListener = Trace.Listeners.OfType<TestTraceListener>();
+            return existingTraceListener?.FirstOrDefault();
+        }
+
+        public static void EnsureTraceListenerExists()
+        {
+            var currentTraceListener = GetCurrentTestTraceListener();
+
+            if (currentTraceListener != null)
+                Trace.Listeners.Remove(currentTraceListener);
+
+            var testTraceListener = new TestTraceListener(writeToTestContext: true);
+            Trace.Listeners.Add(testTraceListener);
         }
 
         public static MockAsyncAppenderConfigurator GetAConfigurator()
