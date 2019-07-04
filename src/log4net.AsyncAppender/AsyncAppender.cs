@@ -22,6 +22,8 @@ namespace log4net.AsyncAppender
 
         public IAsyncAppenderConfigurator Configurator { get; set; }
 
+        public bool Trace { get; set; }
+
         public bool Activated { get; protected set; }
 
         public bool AcceptsLoggingEvents { get; protected set; }
@@ -63,7 +65,9 @@ namespace log4net.AsyncAppender
             }
             catch (Exception ex)
             {
-                this.ErrorHandler?.Error("Error during configuration", ex);
+                var message = "Error during configuration";
+                this.TryTrace(message, ex);
+                this.ErrorHandler?.Error(message, ex);
             }
         }
 
@@ -73,25 +77,33 @@ namespace log4net.AsyncAppender
             {
                 if (this.MaxConcurrentProcessorsCount < 1)
                 {
-                    this.ErrorHandler?.Error($"{nameof(this.MaxConcurrentProcessorsCount)} must be positive.");
+                    var message = $"{nameof(this.MaxConcurrentProcessorsCount)} must be positive.";
+                    this.TryTrace(message);
+                    this.ErrorHandler?.Error(message);
                     return false;
                 }
 
                 if (this.MaxBatchSize < 1)
                 {
-                    this.ErrorHandler?.Error($"{nameof(this.MaxBatchSize)} must be positive.");
+                    var message = $"{nameof(this.MaxBatchSize)} must be positive.";
+                    this.TryTrace(message);
+                    this.ErrorHandler?.Error(message);
                     return false;
                 }
 
                 if (this.CloseTimeoutMillis <= 0)
                 {
-                    this.ErrorHandler?.Error($"{nameof(this.CloseTimeoutMillis)} must be positive.");
+                    var message = $"{nameof(this.CloseTimeoutMillis)} must be positive.";
+                    this.TryTrace(message);
+                    this.ErrorHandler?.Error(message);
                     return false;
                 }
             }
             catch (Exception ex)
             {
-                this.ErrorHandler?.Error("Error during validation", ex);
+                var message = "Error during validation";
+                this.TryTrace(message, ex);
+                this.ErrorHandler?.Error(message, ex);
                 return false;
             }
 
@@ -106,13 +118,22 @@ namespace log4net.AsyncAppender
                 this.MaxBatchSize,
                 _cts.Token)
             {
-                ErrorHandler = (ex, events) => this.ErrorHandler?.Error("An error occurred during events processing", ex)
+                ErrorHandler = (ex, events) =>
+                {
+                    var message = "An error occurred during events processing";
+                    this.TryTrace(message, ex);
+                    this.ErrorHandler?.Error(message, ex);
+                },
+
+                Tracer = message => this.TryTrace(message),
             };
 
             _handler.Start();
 
             this.Activated = true;
             this.AcceptsLoggingEvents = true;
+
+            this.TryTrace("Activated");
         }
 
         #endregion
@@ -123,7 +144,9 @@ namespace log4net.AsyncAppender
         {
             if (!this.Activated || !this.AcceptsLoggingEvents)
             {
-                this.ErrorHandler?.Error("This appender cannot process logging events.");
+                var message = "This appender cannot process logging events.";
+                this.TryTrace(message);
+                this.ErrorHandler?.Error(message);
                 return;
             }
 
@@ -134,7 +157,9 @@ namespace log4net.AsyncAppender
         {
             if (!this.Activated || !this.AcceptsLoggingEvents)
             {
-                this.ErrorHandler?.Error("This appender cannot process logging events.");
+                var message = "This appender cannot process logging events.";
+                this.TryTrace(message);
+                this.ErrorHandler?.Error(message);
                 return;
             }
 
@@ -154,6 +179,7 @@ namespace log4net.AsyncAppender
             if (!this.Activated) return;
 
             this.AcceptsLoggingEvents = false;
+            this.TryTrace("Closing");
 
             _cts.Cancel();
             _handler.Dispose();
@@ -163,11 +189,19 @@ namespace log4net.AsyncAppender
             var processors = _handler.Processors;
             var processorsTermination = Task.WhenAll(processors);
 
+            if (processors.Count > 0)
+                this.TryTrace($"Waiting for {processors.Count} processors to terminate.");
+
             int completedTaskIndex = Task.WaitAny(closingTimeout, processorsTermination);
             if (completedTaskIndex == 0)
-                this.ErrorHandler?.Error($"Processors {processors.Count} termination timed out during appender OnClose.");
+            {
+                var message = $"Processors {processors.Count} termination timed out during appender OnClose.";
+                this.TryTrace(message);
+                this.ErrorHandler?.Error(message);
+            }
 
             this.Activated = false;
+            this.TryTrace("Deactivated");
         }
 
         #endregion
@@ -179,6 +213,20 @@ namespace log4net.AsyncAppender
 
         public Task ProcessingTerminated() =>
             _handler?.ProcessingTerminated() ?? throw new Exception("Appender was not activated");
+
+        #endregion
+
+        #region Trace
+
+        protected void TryTrace(string message, Exception exception = null)
+        {
+            if (!this.Trace) return;
+
+            if (exception == null)
+                System.Diagnostics.Trace.WriteLine(message);
+            else
+                System.Diagnostics.Trace.WriteLine($"{message}, exception: {exception.Message}");
+        }
 
         #endregion
     }
