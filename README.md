@@ -7,6 +7,6 @@
 
 <br />
 
-[![GitHub last commit](https://img.shields.io/github/last-commit/tommasobertoni/log4net.AsyncAppender.svg)](https://github.com/tommasobertoni/log4net.AsyncAppender/commits/master?cacheSeconds=43200)
+[![GitHub last commit](https://img.shields.io/github/last-commit/tommasobertoni/log4net.AsyncAppender.svg?cacheSeconds=43200)](https://github.com/tommasobertoni/log4net.AsyncAppender/commits/master)
 [![GitHub](https://img.shields.io/github/license/tommasobertoni/log4net.AsyncAppender.svg?cacheSeconds=1296000)](https://github.com/tommasobertoni/log4net.AsyncAppender/blob/master/LICENSE)
 <br />
