@@ -5,6 +5,12 @@
 | **AsyncAppender** | [![Type](https://img.shields.io/badge/type-abstract-ff945a.svg)](https://github.com/tommasobertoni/log4net.AsyncAppender/blob/master/src/log4net.AsyncAppender/AsyncAppender.cs)                          | [![Nuget](https://img.shields.io/nuget/vpre/log4net.AsyncAppender.svg?logo=nuget)](https://www.nuget.org/packages/log4net.AsyncAppender)                           | [![Nuget](https://img.shields.io/nuget/dt/log4net.AsyncAppender.svg?logo=nuget)](https://www.nuget.org/packages/log4net.AsyncAppender)                           |
 | **HttpEndpoint**  | [![Type](https://img.shields.io/badge/type-abstract-ff945a.svg)](https://github.com/tommasobertoni/log4net.AsyncAppender/blob/master/src/log4net.AsyncAppender.HttpEndpoint/HttpEndpointAsyncAppender.cs) | [![Nuget](https://img.shields.io/nuget/vpre/log4net.AsyncAppender.HttpEndpoint.svg?logo=nuget)](https://www.nuget.org/packages/log4net.AsyncAppender.HttpEndpoint) | [![Nuget](https://img.shields.io/nuget/dt/log4net.AsyncAppender.HttpEndpoint.svg?logo=nuget)](https://www.nuget.org/packages/log4net.AsyncAppender.HttpEndpoint) |
 
+<br />
+
+[![Azure DevOps builds](https://img.shields.io/azure-devops/build/tommasobertoni/24e536bb-a4bf-4279-b76b-b03e1ab4c560/2.svg?logo=azure%20devops)](https://dev.azure.com/tommasobertoni/log4net.AsyncAppender%20CI/_build/latest?definitionId=2&branchName=master)
+[![Azure DevOps tests](https://img.shields.io/azure-devops/tests/tommasobertoni/log4net.AsyncAppender%20CI/2.svg?compact_message)](https://dev.azure.com/tommasobertoni/log4net.AsyncAppender%20CI/_build/latest?definitionId=2&branchName=master)
+[![Azure DevOps coverage](https://img.shields.io/azure-devops/coverage/tommasobertoni/log4net.AsyncAppender%20CI/2.svg)](https://dev.azure.com/tommasobertoni/log4net.AsyncAppender%20CI/_build/latest?definitionId=2&branchName=master)
+
 [![GitHub last commit](https://img.shields.io/github/last-commit/tommasobertoni/log4net.AsyncAppender.svg)](https://github.com/tommasobertoni/log4net.AsyncAppender/commits/master)
 [![GitHub](https://img.shields.io/github/license/tommasobertoni/log4net.AsyncAppender.svg)](https://github.com/tommasobertoni/log4net.AsyncAppender/blob/master/LICENSE)
 <br />
