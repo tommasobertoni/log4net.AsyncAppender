@@ -82,7 +82,7 @@ namespace log4net.AsyncAppender
 
                 if (!string.IsNullOrWhiteSpace(this.Url))
                 {
-                    if (!Uri.TryCreate(this.Url, UriKind.Absolute, out var _))
+                    if (!Uri.TryCreate(this.Url, UriKind.Absolute, out _))
                     {
                         this.ErrorHandler?.Error($"Invalid url: {this.Url}");
                         return false;
@@ -92,7 +92,7 @@ namespace log4net.AsyncAppender
                 {
                     if (string.IsNullOrWhiteSpace(this.Scheme))
                     {
-                        this.ErrorHandler?.Error($"Missing schema.");
+                        this.ErrorHandler?.Error($"Missing scheme.");
                         return false;
                     }
                     else if (this.Scheme.ToLower() != Uri.UriSchemeHttp.ToLower() &&
@@ -108,15 +108,9 @@ namespace log4net.AsyncAppender
                         return false;
                     }
 
-                    if (string.IsNullOrWhiteSpace(this.Path))
-                    {
-                        this.ErrorHandler?.Error($"Missing path.");
-                        return false;
-                    }
-
                     if (!string.IsNullOrWhiteSpace(this.Port))
                     {
-                        if (!int.TryParse(this.Port, out var _))
+                        if (!int.TryParse(this.Port, out _))
                         {
                             this.ErrorHandler?.Error($"Invalid port.");
                             return false;
@@ -158,19 +152,20 @@ namespace log4net.AsyncAppender
 
         protected override void Activate()
         {
-            if (string.IsNullOrWhiteSpace(this.Url) ||
-                !Uri.TryCreate(this.Url, UriKind.Absolute, out _endpoint))
-            {
-                _endpoint = CreateEndpoint();
-            }
-
             base.Activate();
+            _endpoint = CreateEndpoint();
         }
 
         #endregion
 
         protected virtual Uri CreateEndpoint()
         {
+            if (!string.IsNullOrWhiteSpace(this.Url))
+            {
+                if (Uri.TryCreate(this.Url, UriKind.Absolute, out var endpoint))
+                    return endpoint;
+            }
+
             var uriBuilder = new UriBuilder
             {
                 Scheme = this.Scheme,
