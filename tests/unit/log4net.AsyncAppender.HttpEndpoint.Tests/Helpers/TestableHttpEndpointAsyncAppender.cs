@@ -11,7 +11,9 @@ namespace Tests
 {
     public class TestableHttpEndpointAsyncAppender : HttpEndpointAsyncAppender
     {
-        public int ProcessAsyncInvocationsCount { get; private set; }
+        public long ProcessAsyncInvocationsCount => Interlocked.Read(ref _processAsyncInvocationsCount);
+
+        private long _processAsyncInvocationsCount;
 
         public TestableHttpEndpointAsyncAppender(bool autoConfigure = true)
         {
@@ -19,16 +21,20 @@ namespace Tests
                 this.Configure();
         }
 
-        protected override Task ProcessAsync(List<LoggingEvent> events, CancellationToken cancellationToken)
+        protected override Task ProcessAsync(IReadOnlyList<LoggingEvent> events, CancellationToken cancellationToken)
         {
-            this.ProcessAsyncInvocationsCount++;
+            Interlocked.Increment(ref _processAsyncInvocationsCount);
             return Task.CompletedTask;
         }
 
-        protected override Task<HttpContent> GetHttpContentAsync(List<LoggingEvent> events) => null;
+        protected override Task<HttpContent> GetHttpContentAsync(IReadOnlyList<LoggingEvent> events) => null;
+
+        public new Uri CreateEndpoint() => base.CreateEndpoint();
 
         public new void Configure() => base.Configure();
 
         public new bool ValidateSelf() => base.ValidateSelf();
+
+        public new void Append(LoggingEvent @event) => base.Append(@event);
     }
 }

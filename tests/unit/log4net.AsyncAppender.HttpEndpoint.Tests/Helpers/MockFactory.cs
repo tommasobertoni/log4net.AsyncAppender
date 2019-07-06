@@ -1,8 +1,4 @@
-﻿using log4net.AsyncAppender;
-using log4net.Core;
-using Moq;
-using Moq.Protected;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Threading.Tasks;
