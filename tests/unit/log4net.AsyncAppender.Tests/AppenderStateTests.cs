@@ -40,8 +40,6 @@ namespace Tests
             var completedStartTask = await Task.WhenAny(startTimeoutTask, processingStartedTask);
             if (completedStartTask == startTimeoutTask) Assert.Fail("Start timed out");
 
-            Assert.That(appender.IsProcessing);
-
             var processingTerminatedTask = appender.ProcessingTerminated();
             Assert.That(processingTerminatedTask, Is.Not.Null);
 
