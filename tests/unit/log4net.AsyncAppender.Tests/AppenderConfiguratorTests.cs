@@ -19,7 +19,7 @@ namespace Tests
             var (appender, meh) = GetAnAppenderWithErrorHandler();
             Assert.That(appender.Configurator, Is.Null);
             Assert.That(() => appender.Configure(), Throws.Nothing);
-            Assert.That(meh.ErrorsCount, Is.EqualTo(0));
+            Assert.That(meh.ErrorsCount, Is.Zero);
         }
 
         [Test]
