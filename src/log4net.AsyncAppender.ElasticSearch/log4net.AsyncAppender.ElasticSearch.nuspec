@@ -1,0 +1,31 @@
+<?xml version="1.0"?>
+<package >
+  <metadata>
+    <id>log4net.AsyncAppender.ElasticSearch</id>
+    <version>0.1.0-preview</version>
+    <title>log4net.AsyncAppender.ElasticSearch</title>
+    <authors>Tommaso Bertoni</authors>
+    <owners>tommasobertoni</owners>
+    <license type="expression">MIT</license>
+    <projectUrl>https://github.com/tommasobertoni/log4net.AsyncAppender/blob/master/README.md</projectUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <summary>A fast and asynchronous log4net appender for ElasticSearch.</summary>
+    <description>This appender extends the log4net.AsyncAppender.HttpEndpoint package and enabled the configuration
+of the elasticsearch endpoint using: url, url tokens and connection string.
+Bulk send is always enabled.
+
+By default, the connection string and the log document follow the templates and conventions defined in the package log4net.ElasticSearch.
+
+Json serialization is done using the Utf8Json library.
+    </description>
+    <repository type="git" url="https://github.com/tommasobertoni/log4net.AsyncAppender" />
+    <copyright>Copyright 2019</copyright>
+    <language>en-US</language>
+    <tags>log4net netstandard netstandard20 logging async concurrent elasticsearch</tags>
+    <dependencies>
+      <group targetFramework=".NETStandard2.0">
+        <dependency id="log4net.AsyncAppender.HttpEndpoint" version="0.1.2-preview" />
+      </group>
+    </dependencies>
+  </metadata>
+</package>

@@ -27,7 +27,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "log4net.AsyncAppender.Tests
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "log4net.AsyncAppender.HttpEndpoint", "src\log4net.AsyncAppender.HttpEndpoint\log4net.AsyncAppender.HttpEndpoint.csproj", "{C075AEFB-5B70-4FA9-A8CA-46A12953934E}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "log4net.AsyncAppender.HttpEndpoint.Tests", "tests\unit\log4net.AsyncAppender.HttpEndpoint.Tests\log4net.AsyncAppender.HttpEndpoint.Tests.csproj", "{8AF64D58-0950-4FD1-8204-D40FDF045344}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "log4net.AsyncAppender.HttpEndpoint.Tests", "tests\unit\log4net.AsyncAppender.HttpEndpoint.Tests\log4net.AsyncAppender.HttpEndpoint.Tests.csproj", "{8AF64D58-0950-4FD1-8204-D40FDF045344}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "log4net.AsyncAppender.ElasticSearch.Tests", "tests\unit\log4net.AsyncAppender.ElasticSearch.Tests\log4net.AsyncAppender.ElasticSearch.Tests.csproj", "{5CAC7C8E-B9DF-4D0C-8B04-53CA71828F36}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -55,6 +57,10 @@ Global
 		{8AF64D58-0950-4FD1-8204-D40FDF045344}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{8AF64D58-0950-4FD1-8204-D40FDF045344}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{8AF64D58-0950-4FD1-8204-D40FDF045344}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5CAC7C8E-B9DF-4D0C-8B04-53CA71828F36}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5CAC7C8E-B9DF-4D0C-8B04-53CA71828F36}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5CAC7C8E-B9DF-4D0C-8B04-53CA71828F36}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5CAC7C8E-B9DF-4D0C-8B04-53CA71828F36}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -67,6 +73,7 @@ Global
 		{68444FC5-71A1-41F7-9726-35952DC60459} = {A655999B-D1E8-4F75-B919-DD0E76F6A153}
 		{C075AEFB-5B70-4FA9-A8CA-46A12953934E} = {1E214B73-5EBD-4499-A02D-D0E2BFB795D2}
 		{8AF64D58-0950-4FD1-8204-D40FDF045344} = {A655999B-D1E8-4F75-B919-DD0E76F6A153}
+		{5CAC7C8E-B9DF-4D0C-8B04-53CA71828F36} = {A655999B-D1E8-4F75-B919-DD0E76F6A153}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {2C2D0D43-79CB-4D04-A82B-79159E5B8D7E}
