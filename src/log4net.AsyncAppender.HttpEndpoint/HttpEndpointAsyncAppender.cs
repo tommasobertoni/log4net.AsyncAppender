@@ -65,6 +65,11 @@ namespace log4net.AsyncAppender
                     this.EventJsonSerializerDelegate = e =>
                         Utf8Json.JsonSerializer.ToJsonString(e, Utf8Json.Resolvers.StandardResolver.CamelCase);
             }
+
+            if (this.HttpClient == null)
+            {
+                this.HttpClient = new HttpClient();
+            }
         }
 
         protected override bool ValidateSelf()
@@ -77,6 +82,12 @@ namespace log4net.AsyncAppender
                     this.EventJsonSerializerDelegate == null)
                 {
                     this.ErrorHandler?.Error("Missing event to json serializer.");
+                    return false;
+                }
+
+                if (this.HttpClient == null)
+                {
+                    this.ErrorHandler?.Error("Missing HttpClient");
                     return false;
                 }
 

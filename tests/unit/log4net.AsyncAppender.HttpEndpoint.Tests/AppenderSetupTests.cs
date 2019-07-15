@@ -142,9 +142,100 @@ namespace Tests
         }
 
         [Test]
+        public void DefaultHttpClientIsAssigned()
+        {
+            var (appender, meh) = GetAnAppenderWithErrorHandler(autoConfigure: false);
+
+            appender.Scheme = "https";
+            appender.Host = "www.server.com";
+            appender.Path = "/test/api";
+
+            Assert.That(appender.HttpClient, Is.Null);
+
+            appender.Configure();
+
+            Assert.That(meh.ErrorsCount, Is.Zero);
+            Assert.That(appender.HttpClient, Is.Not.Null);
+        }
+
+        [Test]
+        public void HttpClientIsRequiredByValidation()
+        {
+            var (appender, meh) = GetAnAppenderWithErrorHandler(autoConfigure: false);
+
+            appender.Scheme = "https";
+            appender.Host = "www.server.com";
+            appender.Path = "/test/api";
+
+            Assert.That(appender.HttpClient, Is.Null);
+            appender.Configure();
+            Assert.That(appender.HttpClient, Is.Not.Null);
+
+            Assert.That(() => appender.ValidateSelf(), Throws.Nothing);
+            Assert.That(meh.ErrorsCount, Is.Zero);
+
+            appender.HttpClient = null;
+            Assert.That(() => appender.ValidateSelf(), Throws.Nothing);
+            Assert.That(meh.ErrorsCount, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void CustomHttpClientIsNotOverridden()
+        {
+            {
+                var (appender, meh) = GetAnAppenderWithErrorHandler(autoConfigure: false);
+
+                appender.Scheme = "https";
+                appender.Host = "www.server.com";
+                appender.Path = "/test/api";
+
+                Assert.That(appender.HttpClient, Is.Null);
+
+                var myHttpClient = new System.Net.Http.HttpClient(new System.Net.Http.HttpClientHandler
+                {
+                    AllowAutoRedirect = true,
+                    AutomaticDecompression = System.Net.DecompressionMethods.None
+                });
+
+                appender.HttpClient = myHttpClient;
+
+                appender.Configure();
+
+                Assert.That(meh.ErrorsCount, Is.Zero);
+                Assert.That(appender.HttpClient, Is.Not.Null);
+                Assert.That(appender.HttpClient, Is.EqualTo(myHttpClient));
+            }
+
+            {
+                var (appender, meh) = GetAnAppenderWithErrorHandler(autoConfigure: false);
+
+                appender.Scheme = "https";
+                appender.Host = "www.server.com";
+                appender.Path = "/test/api";
+
+                Assert.That(appender.EventJsonSerializer, Is.Null);
+                Assert.That(appender.EventJsonSerializerDelegate, Is.Null);
+
+                Func<log4net.Core.LoggingEvent, string> ejsDelegate = _ => string.Empty;
+                appender.EventJsonSerializerDelegate = ejsDelegate;
+
+                appender.Configure();
+
+                Assert.That(meh.ErrorsCount, Is.Zero);
+                Assert.That(appender.EventJsonSerializer, Is.Null);
+                Assert.That(appender.EventJsonSerializerDelegate, Is.Not.Null);
+                Assert.That(appender.EventJsonSerializerDelegate, Is.EqualTo(ejsDelegate));
+            }
+        }
+
+        [Test]
         public void DefaultJsonSerializerIsAssigned()
         {
             var (appender, meh) = GetAnAppenderWithErrorHandler(autoConfigure: false);
+
+            appender.Scheme = "https";
+            appender.Host = "www.server.com";
+            appender.Path = "/test/api";
 
             Assert.That(appender.EventJsonSerializer, Is.Null);
             Assert.That(appender.EventJsonSerializerDelegate, Is.Null);
@@ -162,6 +253,10 @@ namespace Tests
         {
             var (appender, meh) = GetAnAppenderWithErrorHandler(autoConfigure: false);
 
+            appender.Scheme = "https";
+            appender.Host = "www.server.com";
+            appender.Path = "/test/api";
+
             Assert.That(appender.EventJsonSerializer, Is.Null);
             Assert.That(appender.EventJsonSerializerDelegate, Is.Null);
 
@@ -177,6 +272,10 @@ namespace Tests
         public void JsonSerializerIsRequiredByValidation()
         {
             var (appender, meh) = GetAnAppenderWithErrorHandler(autoConfigure: false);
+
+            appender.Scheme = "https";
+            appender.Host = "www.server.com";
+            appender.Path = "/test/api";
 
             Assert.That(appender.EventJsonSerializer, Is.Null);
             Assert.That(appender.EventJsonSerializerDelegate, Is.Null);
@@ -198,6 +297,10 @@ namespace Tests
             {
                 var (appender, meh) = GetAnAppenderWithErrorHandler(autoConfigure: false);
 
+                appender.Scheme = "https";
+                appender.Host = "www.server.com";
+                appender.Path = "/test/api";
+
                 Assert.That(appender.EventJsonSerializer, Is.Null);
                 Assert.That(appender.EventJsonSerializerDelegate, Is.Null);
 
@@ -214,6 +317,10 @@ namespace Tests
 
             {
                 var (appender, meh) = GetAnAppenderWithErrorHandler(autoConfigure: false);
+
+                appender.Scheme = "https";
+                appender.Host = "www.server.com";
+                appender.Path = "/test/api";
 
                 Assert.That(appender.EventJsonSerializer, Is.Null);
                 Assert.That(appender.EventJsonSerializerDelegate, Is.Null);
