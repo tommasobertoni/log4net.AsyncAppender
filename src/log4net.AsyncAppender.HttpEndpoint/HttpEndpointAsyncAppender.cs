@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Net;
 using System.Net.Http;
 using System.Text;
 using System.Threading;
@@ -68,8 +69,17 @@ namespace log4net.AsyncAppender
 
             if (this.HttpClient == null)
             {
-                this.HttpClient = new HttpClient();
+                this.HttpClient = NewHttpClient();
             }
+        }
+
+        protected virtual HttpClient NewHttpClient()
+        {
+            return new HttpClient(new HttpClientHandler
+            {
+                AutomaticDecompression = DecompressionMethods.Deflate | DecompressionMethods.GZip,
+                AllowAutoRedirect = true,
+            });
         }
 
         protected override bool ValidateSelf()
