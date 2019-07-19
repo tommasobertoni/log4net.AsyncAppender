@@ -170,22 +170,24 @@ namespace log4net.AsyncAppender.ElasticSearch
         protected override Task<HttpContent> GetHttpContentAsync(IReadOnlyList<LoggingEvent> events)
         {
             var json = this.SerializeAllToJson(events);
-            HttpContent content = new StringContent(json, Encoding.UTF8, "application/json");
+            HttpContent content = new StringContent(json, Encoding.UTF8, "application/x-ndjson");
             return Task.FromResult(content);
         }
 
         protected virtual string SerializeAllToJson(IReadOnlyList<LoggingEvent> events)
         {
-            var sb = new StringBuilder();
+            // https://www.elastic.co/guide/en/elasticsearch/reference/current/docs-bulk.html
 
-            if (events.Count != 1)
-                sb.AppendLine("{\"index\" : {} }");
+            var sb = new StringBuilder();
 
             foreach (var e in events)
             {
                 var json = this.SerializeToJson(e);
+                sb.AppendLine("{\"index\" : {} }");
                 sb.AppendLine(json);
             }
+
+            sb.AppendLine();
 
             return sb.ToString();
         }

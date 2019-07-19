@@ -2,7 +2,7 @@
 <package >
   <metadata>
     <id>log4net.AsyncAppender.ElasticSearch</id>
-    <version>0.1.1-preview</version>
+    <version>0.1.2-preview</version>
     <title>log4net.AsyncAppender.ElasticSearch</title>
     <authors>Tommaso Bertoni</authors>
     <owners>tommasobertoni</owners>
@@ -18,14 +18,14 @@ By default, the connection string and the log document follow the templates and 
 
 Json serialization is done using the Utf8Json library.
     </description>
-    <releaseNotes>Updated log4net.AsyncAppender.HttpEndpoint dependency.</releaseNotes>
+    <releaseNotes>Fixed bulk format when sending logs to elasticsearch.</releaseNotes>
     <repository type="git" url="https://github.com/tommasobertoni/log4net.AsyncAppender" />
     <copyright>Copyright 2019</copyright>
     <language>en-US</language>
     <tags>log4net netstandard netstandard20 logging async elasticsearch</tags>
     <dependencies>
       <group targetFramework=".NETStandard2.0">
-        <dependency id="log4net.AsyncAppender.HttpEndpoint" version="0.1.3-preview" />
+        <dependency id="log4net.AsyncAppender.HttpEndpoint" version="0.1.4-preview" />
       </group>
     </dependencies>
   </metadata>
