@@ -12,7 +12,7 @@ namespace log4net.AsyncAppender
 {
     public abstract class AsyncAppender : AppenderSkeleton
     {
-        #region Properties
+        #region Configuration properties
 
         public int MaxConcurrentProcessorsCount { get; set; } = 3;
 
@@ -24,13 +24,13 @@ namespace log4net.AsyncAppender
 
         public bool Trace { get; set; }
 
+        #endregion
+
         public bool Activated { get; protected set; }
 
         public bool AcceptsLoggingEvents { get; protected set; }
 
         public bool IsProcessing => _handler?.IsProcessing ?? false;
-
-        #endregion
 
         private readonly CancellationTokenSource _cts = new CancellationTokenSource();
         private EventsHandler _handler;

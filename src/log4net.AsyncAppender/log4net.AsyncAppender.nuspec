@@ -24,7 +24,7 @@ Runtime setup of the appender instance is enabled using the contract IAsyncAppen
     <repository type="git" url="https://github.com/tommasobertoni/log4net.AsyncAppender" />
     <copyright>Copyright 2019</copyright>
     <language>en-US</language>
-    <tags>log4net netstandard netstandard20 logging async concurrent</tags>
+    <tags>log4net netstandard netstandard20 logging async</tags>
     <dependencies>
       <group targetFramework=".NETStandard2.0">
         <dependency id="log4net" version="[2.0.8,3.0)" />
