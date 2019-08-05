@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -12,6 +13,10 @@ namespace log4net.AsyncAppender.ElasticSearch
     public class ElasticSearchAsyncAppender : HttpEndpointAsyncAppender
     {
         public string ConnectionString { get; set; }
+
+        public string ContentType { get; set; }
+
+        public bool RequestSlimResponse { get; set; } = true;
 
         public string Index { get; set; }
 
@@ -59,6 +64,11 @@ namespace log4net.AsyncAppender.ElasticSearch
             }
 
             base.Configure();
+
+            if (string.IsNullOrWhiteSpace(this.ContentType))
+            {
+                this.ContentType = "application/json";
+            }
 
             // Local functions
 
@@ -114,41 +124,38 @@ namespace log4net.AsyncAppender.ElasticSearch
 
         protected override Uri CreateEndpoint()
         {
-            var baseUri = base.CreateEndpoint();
-
-            var sb = new StringBuilder();
-            sb.Append($"{baseUri.Scheme}://");
-
-            var (userName, password) = TryExtractUserInfo(baseUri);
-
-            if (!string.IsNullOrWhiteSpace(userName) && !string.IsNullOrWhiteSpace(password))
-                sb.Append($"{userName}:{password}@");
-
-            sb.Append($"{baseUri.Host}"); // "www.server.com"
-            sb.Append($":{baseUri.Port}"); // ":80"
-
-            // "/test/api/" or just "/"
-            if (baseUri.AbsolutePath == "/")
-                sb.Append(baseUri.AbsolutePath);
-            else
-                sb.Append($"{baseUri.AbsolutePath}/");
+            var uri = base.CreateEndpoint();
+            var builder = new UriBuilder(uri);
+            var query = System.Web.HttpUtility.ParseQueryString(builder.Query);
 
             var indexForRouting = this.IsRollingIndex
                 ? $"{this.Index}-{DateTime.UtcNow.ToString("yyyy.MM.dd")}"
                 : this.Index;
 
-            sb.Append($"{Uri.EscapeUriString(indexForRouting)}");
+            var basePath = uri.AbsolutePath;
 
-            var routingForUri = string.IsNullOrWhiteSpace(this.Routing)
-                ? string.Empty
-                : $"?routing={this.Routing}";
+            if (!basePath.EndsWith("/"))
+                basePath += "/";
 
-            sb.Append($"/logEvent{Uri.EscapeUriString(routingForUri)}/_bulk");
+            var relative = new Uri($"{basePath}{indexForRouting}/logEvent/_bulk", UriKind.Relative);
+            Uri.TryCreate(uri, relative, out uri);
 
-            if (!string.IsNullOrWhiteSpace(baseUri.Query))
-                sb.Append(Uri.EscapeUriString(baseUri.Query));
+            builder = new UriBuilder(uri);
 
-            var uri = new Uri(sb.ToString());
+            if (!string.IsNullOrWhiteSpace(this.Routing))
+            {
+                query["routing"] = this.Routing;
+            }
+
+            if (this.RequestSlimResponse)
+            {
+                query["filter_path"] = "took,errors";
+            }
+
+            builder.Query = System.Web.HttpUtility.UrlDecode(query.ToString());
+
+            uri = builder.Uri;
+
             return uri;
         }
 
@@ -169,8 +176,13 @@ namespace log4net.AsyncAppender.ElasticSearch
 
         protected override Task<HttpContent> GetHttpContentAsync(IReadOnlyList<LoggingEvent> events)
         {
-            var json = this.SerializeAllToJson(events);
-            HttpContent content = new StringContent(json, Encoding.UTF8, "application/x-ndjson");
+            string json = this.SerializeAllToJson(events);
+
+            HttpContent content = new StringContent(json);
+
+            if (!string.IsNullOrWhiteSpace(this.ContentType))
+                content.Headers.ContentType = MediaTypeHeaderValue.Parse(this.ContentType);
+
             return Task.FromResult(content);
         }
 
