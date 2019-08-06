@@ -3,6 +3,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using System.Web;
 using static Tests.MockFactory;
 
 namespace Tests
@@ -13,6 +14,7 @@ namespace Tests
         public void CorrectEndpointFromUrlAndIndexToken()
         {
             var (appender, meh) = GetAnAppenderWithErrorHandler(autoConfigure: false);
+            appender.RequestSlimResponse = false;
             appender.Url = "https://www.server.com:8080/test/api?v=1";
             appender.Index = "anIndex";
 
@@ -34,6 +36,7 @@ namespace Tests
         public void CorrectEndpointFromUrlAndIndexAndRoutingToken()
         {
             var (appender, meh) = GetAnAppenderWithErrorHandler(autoConfigure: false);
+            appender.RequestSlimResponse = false;
             appender.Url = "https://www.server.com:8080/test/api?v=1";
             appender.Index = "anIndex";
             appender.Routing = "route123";
@@ -46,17 +49,18 @@ namespace Tests
             var endpoint = appender.CreateEndpoint();
             Assert.That(endpoint, Is.Not.Null);
 
-            var expectedUrl = "https://www.server.com:8080/test/api/anIndex/logEvent?routing=route123/_bulk?v=1";
+            var expectedUrl = "https://www.server.com:8080/test/api/anIndex/logEvent/_bulk?v=1&routing=route123";
             Assert.That(endpoint.AbsoluteUri, Is.EqualTo(expectedUrl));
 
             appender.Close();
         }
 
         [Test, TestCaseSource(nameof(ConnectionStringTestCases))]
-        public void CorrectEndpointFromConnectionString(string connectionString, string expectedUrl)
+        public void CorrectEndpointFromConnectionString(string connectionString, string expectedUrl, bool requestSlimResponse)
         {
             var (appender, meh) = GetAnAppenderWithErrorHandler(autoConfigure: false);
             appender.ConnectionString = connectionString;
+            appender.RequestSlimResponse = requestSlimResponse;
 
             appender.Configure();
             Assert.That(appender.ValidateSelf());
@@ -77,50 +81,65 @@ namespace Tests
         {
             var today = DateTime.UtcNow.ToString("yyyy.MM.dd");
 
-            yield return new TestCaseData(
-                "Server=localhost;Index=log;Port=9200;rolling=true",
-                $"http://localhost:9200/log-{today}/logEvent/_bulk"
-            ).SetName("Rolling");
+            var testCaseData = new List<(string cs, string url, string name)>
+            {
+                ( cs:   "Server=localhost;Index=log;Port=9200;rolling=true",
+                  url:  $"http://localhost:9200/log-{today}/logEvent/_bulk",
+                  name: "Rolling" ),
 
-            yield return new TestCaseData(
-                "Server=localhost;Index=log;Port=9200",
-                "http://localhost:9200/log/logEvent/_bulk"
-            ).SetName("Implicit non-rolling");
+                ( cs:   "Server=localhost;Index=log;Port=9200",
+                  url:  "http://localhost:9200/log/logEvent/_bulk",
+                  name: "Implicit non-rolling" ),
 
-            yield return new TestCaseData(
-                "Server=localhost;Index=log;Port=9200;rolling=false",
-                "http://localhost:9200/log/logEvent/_bulk"
-            ).SetName("Explicit non-rolling");
+                ( cs:   "Server=localhost;Index=log;Port=9200;rolling=false",
+                  url:  "http://localhost:9200/log/logEvent/_bulk",
+                  name: "Explicit non-rolling" ),
 
-            yield return new TestCaseData(
-                "Server=localhost;Index=log;rolling=true",
-                $"http://localhost/log-{today}/logEvent/_bulk"
-            ).SetName("Rolling portless");
+                ( cs:   "Server=localhost;Index=log;rolling=true",
+                  url:  $"http://localhost/log-{today}/logEvent/_bulk",
+                  name: "Rolling portless" ),
 
-            yield return new TestCaseData(
-                "Server=localhost;Index=log",
-                $"http://localhost/log/logEvent/_bulk"
-            ).SetName("Implicit non-rolling portless");
+                ( cs:   "Server=localhost;Index=log",
+                  url:  $"http://localhost/log/logEvent/_bulk",
+                  name: "Implicit non-rolling portless" ),
 
-            yield return new TestCaseData(
-                "Server=localhost;Index=log;rolling=false",
-                $"http://localhost/log/logEvent/_bulk"
-            ).SetName("Explicit non-rolling portless");
+                ( cs:   "Server=localhost;Index=log;rolling=false",
+                  url:  $"http://localhost/log/logEvent/_bulk",
+                  name: "Explicit non-rolling portless" ),
 
-            yield return new TestCaseData(
-                "Server=localhost;Index=log;Routing=foo",
-                $"http://localhost/log/logEvent?routing=foo/_bulk"
-            ).SetName("Routing");
+                ( cs:   "Server=localhost;Index=log;Routing=foo",
+                  url:  $"http://localhost/log/logEvent/_bulk?routing=foo",
+                  name: "Routing" ),
 
-            yield return new TestCaseData(
-                "Server=localhost;Index=log;Routing=foo;rolling=false;User=user;Pwd=pass",
-                $"http://user:pass@localhost/log/logEvent?routing=foo/_bulk"
-            ).SetName("With credentials");
+                ( cs:   "Server=localhost;Index=log;Routing=foo;rolling=false;User=user;Pwd=pass",
+                  url:  $"http://user:pass@localhost/log/logEvent/_bulk?routing=foo",
+                  name: "With credentials" ),
 
-            yield return new TestCaseData(
-                "Server=localhost;Index=log;Routing=foo;Query=v=1",
-                $"http://localhost/log/logEvent?routing=foo/_bulk?v=1"
-            ).SetName("With query string");
+                ( cs:   "Server=localhost;Index=log;Routing=foo;Query=v=1",
+                  url:  $"http://localhost/log/logEvent/_bulk?v=1&routing=foo",
+                  name: "With query string" ),
+            };
+
+            foreach (var x in testCaseData)
+            {
+                var requestSlimResponse = false;
+                var (cs, url, name) = x;
+
+                yield return new TestCaseData(cs, url, requestSlimResponse).SetName(name);
+
+                // Slim response.
+
+                var builder = new UriBuilder(url);
+                var query = HttpUtility.ParseQueryString(builder.Query);
+                query["filter_path"] = "took,errors";
+                builder.Query = HttpUtility.UrlDecode(query.ToString());
+
+                var slimResponseUrl = builder.Uri.AbsoluteUri;
+                var slimName = $"{name} - slim";
+                requestSlimResponse = true;
+
+                yield return new TestCaseData(cs, slimResponseUrl, requestSlimResponse).SetName(slimName);
+            }
         }
 
         #endregion
