@@ -75,6 +75,37 @@ namespace Tests
         }
 
         [Test]
+        public void ThereIsADefaultContentType()
+        {
+            var appender = GetAnAppender(autoConfigure: false);
+
+            Assert.That(appender.ContentType, Is.Null);
+
+            appender.Configure();
+
+            Assert.That(appender.ContentType, Is.EqualTo("application/json"));
+        }
+
+        [Test]
+        public void ContentTypeCanBeSet()
+        {
+            var appender = GetAnAppender(autoConfigure: false);
+
+            appender.ContentType = "application/x-ndjson";
+
+            appender.Configure();
+
+            Assert.That(appender.ContentType, Is.EqualTo("application/x-ndjson"));
+        }
+
+        [Test]
+        public void SlimResponseIsRequestedByDefault()
+        {
+            var appender = GetAnAppender();
+            Assert.That(appender.RequestSlimResponse, Is.True);
+        }
+
+        [Test]
         public async Task CustomProjectionIsUsed()
         {
             int projectionInvocationsCount = 0;
