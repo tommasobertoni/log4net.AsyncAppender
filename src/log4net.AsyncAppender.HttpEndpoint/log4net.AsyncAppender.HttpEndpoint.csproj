@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <!-- Properties related to NuGet packaging -->
-    <PackageId>log4net.AsyncAppender.ElasticSearch</PackageId>
+    <PackageId>log4net.AsyncAppender.HttpEndpoint</PackageId>
     <Title>A fast and asynchronous abstract log4net appender targeting an http endpoint.</Title>
     <Description>
       This abstract appender extends the log4net.AsyncAppender package and enabled the configuration
