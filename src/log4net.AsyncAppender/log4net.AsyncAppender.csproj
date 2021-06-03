@@ -1,12 +1,31 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>netstandard2.0</TargetFramework>
-    <LangVersion>latest</LangVersion>
+    <!-- Properties related to NuGet packaging -->
+    <PackageId>log4net.AsyncAppender</PackageId>
+    <Title>A fast and asynchronous abstract log4net appender.</Title>
+    <Description>
+      This abstract appender uses concurrent collections and tasks to enable
+      asynchronous and concurrent batch processing of LoggingEvents.
+
+      The configuration enables to specify:
+      - the max number of concurrent processors (tasks) that are handling log batches
+      - the max logs batch size
+      - the appender closing timeout (millis).
+
+      Runtime setup of the appender instance is enabled using the contract IAsyncAppenderConfigurator.
+    </Description>
+    <PackageTags>log4net netstandard netstandard20 logging async</PackageTags>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="log4net" Version="2.0.8" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleToAttribute">
+      <_Parameter1>log4net.AsyncAppender.Tests</_Parameter1>
+    </AssemblyAttribute>
   </ItemGroup>
 
 </Project>

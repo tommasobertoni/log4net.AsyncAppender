@@ -1,13 +1,21 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>netstandard2.0</TargetFramework>
-    <LangVersion>latest</LangVersion>
+    <!-- Properties related to NuGet packaging -->
+    <PackageId>log4net.AsyncAppender.ElasticSearch</PackageId>
+    <Title>A fast and asynchronous log4net appender for ElasticSearch.</Title>
+    <Description>
+      This appender extends the log4net.AsyncAppender.HttpEndpoint package and enabled the configuration
+      of the elasticsearch endpoint using: url, url tokens and connection string.
+      Bulk send is always enabled.
+
+      By default, the connection string and the log document follow the templates and conventions defined in the package log4net.ElasticSearch.
+    </Description>
+    <PackageTags>log4net netstandard netstandard20 logging async elasticsearch</PackageTags>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="log4net" Version="2.0.8" />
-    <PackageReference Include="log4net.AsyncAppender.HttpEndpoint" Version="0.1.4-preview" />
+    <ProjectReference Include="..\log4net.AsyncAppender.HttpEndpoint\log4net.AsyncAppender.HttpEndpoint.csproj" />
   </ItemGroup>
 
 </Project>

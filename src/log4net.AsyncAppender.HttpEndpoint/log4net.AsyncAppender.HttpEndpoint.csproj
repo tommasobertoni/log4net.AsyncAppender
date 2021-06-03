@@ -1,13 +1,31 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>netstandard2.0</TargetFramework>
-    <LangVersion>latest</LangVersion>
+    <!-- Properties related to NuGet packaging -->
+    <PackageId>log4net.AsyncAppender.ElasticSearch</PackageId>
+    <Title>A fast and asynchronous abstract log4net appender targeting an http endpoint.</Title>
+    <Description>
+      This abstract appender extends the log4net.AsyncAppender package and enabled the configuration
+      of an http endpoint and provides an HttpClient instance and methods to create and send the request.
+
+      An IEventJsonSerializer contract is provided in order to enable plugging in a custom json serializer (if needed).
+      Without a custom serializer, this package falls back on using the Utf8Json library, when json serialization is requested.
+    </Description>
+    <PackageTags>log4net netstandard netstandard20 logging async</PackageTags>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="log4net.AsyncAppender" Version="0.4.3-preview" />
+    <ProjectReference Include="..\log4net.AsyncAppender\log4net.AsyncAppender.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Utf8Json" Version="1.3.7" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleToAttribute">
+      <_Parameter1>log4net.AsyncAppender.HttpEndpoint.Tests</_Parameter1>
+    </AssemblyAttribute>
   </ItemGroup>
 
 </Project>
