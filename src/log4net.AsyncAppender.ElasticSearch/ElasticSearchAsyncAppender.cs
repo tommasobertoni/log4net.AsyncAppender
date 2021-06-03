@@ -1,10 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 using log4net.Core;
 
@@ -12,67 +10,67 @@ namespace log4net.AsyncAppender.ElasticSearch
 {
     public class ElasticSearchAsyncAppender : HttpEndpointAsyncAppender
     {
-        public string ConnectionString { get; set; }
+        public string? ConnectionString { get; set; }
 
-        public string ContentType { get; set; }
+        public string? ContentType { get; set; }
 
         public bool RequestSlimResponse { get; set; } = true;
 
-        public string Index { get; set; }
+        public string? Index { get; set; }
 
         public bool IsRollingIndex { get; set; }
 
-        public string Routing { get; set; }
+        public string? Routing { get; set; }
 
-        public Func<LoggingEvent, object> Projection { get; set; }
+        public Func<LoggingEvent, object>? Projection { get; set; }
 
         #region Setup
 
         protected override void Configure()
         {
-            if (!string.IsNullOrWhiteSpace(this.ConnectionString))
+            if (!string.IsNullOrWhiteSpace(ConnectionString))
             {
                 try
                 {
-                    var tokens = Parse(this.ConnectionString);
+                    var tokens = Parse(ConnectionString);
 
-                    base.Scheme = TryGet(tokens, "Scheme");
-                    base.UserName = TryGet(tokens, "UserName", "User");
-                    base.Password = TryGet(tokens, "Password", "Pwd");
-                    base.Host = TryGet(tokens, "Host", "Server");
-                    base.Port = TryGet(tokens, "Port");
-                    base.Path = TryGet(tokens, "Path");
-                    base.Query = TryGet(tokens, "Query");
-                    this.IsRollingIndex = bool.TryParse(TryGet(tokens, "Rolling"), out var isRollingIndex) ? isRollingIndex : false;
-                    this.Index = TryGet(tokens, "Index");
-                    this.Routing = TryGet(tokens, "Routing");
+                    Scheme = TryGet(tokens, "Scheme");
+                    UserName = TryGet(tokens, "UserName", "User");
+                    Password = TryGet(tokens, "Password", "Pwd");
+                    Host = TryGet(tokens, "Host", "Server");
+                    Port = TryGet(tokens, "Port");
+                    Path = TryGet(tokens, "Path");
+                    Query = TryGet(tokens, "Query");
+                    IsRollingIndex = bool.TryParse(TryGet(tokens, "Rolling"), out var isRollingIndex) && isRollingIndex;
+                    Index = TryGet(tokens, "Index");
+                    Routing = TryGet(tokens, "Routing");
 
                     // Defaults
 
-                    if (string.IsNullOrWhiteSpace(base.Scheme))
-                        base.Scheme = "http";
+                    if (string.IsNullOrWhiteSpace(Scheme))
+                        Scheme = "http";
                 }
                 catch
                 {
-                    this.ErrorHandler?.Error($"Invalid connection string.");
+                    ErrorHandler?.Error($"Invalid connection string.");
                 }
             }
 
-            if (this.Projection == null)
+            if (Projection == null)
             {
-                this.Projection = this.ProjectToElasticModel;
+                Projection = ProjectToElasticModel;
             }
 
-            base.Configure();
+            Configure();
 
-            if (string.IsNullOrWhiteSpace(this.ContentType))
+            if (string.IsNullOrWhiteSpace(ContentType))
             {
-                this.ContentType = "application/json";
+                ContentType = "application/json";
             }
 
             // Local functions
 
-            string TryGet(Dictionary<string, string> tokens, params string[] coalescingSettingsKeys)
+            static string TryGet(Dictionary<string, string> tokens, params string[] coalescingSettingsKeys)
             {
                 foreach (var key in coalescingSettingsKeys)
                     if (tokens.TryGetValue(key, out var value))
@@ -84,26 +82,26 @@ namespace log4net.AsyncAppender.ElasticSearch
 
         protected override bool ValidateSelf()
         {
-            if (!base.ValidateSelf()) return false;
+            if (!ValidateSelf()) return false;
 
             try
             {
-                if (string.IsNullOrWhiteSpace(this.Index))
+                if (string.IsNullOrWhiteSpace(Index))
                 {
-                    this.ErrorHandler?.Error($"Missing index.");
+                    ErrorHandler?.Error($"Missing index.");
                     return false;
                 }
             }
             catch (Exception ex)
             {
-                this.ErrorHandler?.Error("Error during validation", ex);
+                ErrorHandler?.Error("Error during validation", ex);
                 return false;
             }
 
             return true;
         }
 
-        protected virtual Dictionary<string, string> Parse(string connectionString)
+        protected virtual Dictionary<string, string> Parse(string? connectionString)
         {
             if (string.IsNullOrEmpty(connectionString))
                 return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
@@ -124,13 +122,13 @@ namespace log4net.AsyncAppender.ElasticSearch
 
         protected override Uri CreateEndpoint()
         {
-            var uri = base.CreateEndpoint();
+            var uri = CreateEndpoint();
             var builder = new UriBuilder(uri);
             var query = System.Web.HttpUtility.ParseQueryString(builder.Query);
 
-            var indexForRouting = this.IsRollingIndex
-                ? $"{this.Index}-{DateTime.UtcNow.ToString("yyyy.MM.dd")}"
-                : this.Index;
+            var indexForRouting = IsRollingIndex
+                ? $"{Index}-{DateTime.UtcNow:yyyy.MM.dd}"
+                : Index;
 
             var basePath = uri.AbsolutePath;
 
@@ -142,12 +140,12 @@ namespace log4net.AsyncAppender.ElasticSearch
 
             builder = new UriBuilder(uri);
 
-            if (!string.IsNullOrWhiteSpace(this.Routing))
+            if (!string.IsNullOrWhiteSpace(Routing))
             {
-                query["routing"] = this.Routing;
+                query["routing"] = Routing;
             }
 
-            if (this.RequestSlimResponse)
+            if (RequestSlimResponse)
             {
                 query["filter_path"] = "took,errors";
             }
@@ -159,29 +157,14 @@ namespace log4net.AsyncAppender.ElasticSearch
             return uri;
         }
 
-        private (string userName, string password) TryExtractUserInfo(Uri uri)
-        {
-            string userName = null;
-            string password = null;
-
-            if (uri != null && !string.IsNullOrWhiteSpace(uri.UserInfo))
-            {
-                var items = uri.UserInfo.Split(':');
-                if (items.Length > 0) userName = items[0];
-                if (items.Length > 1) password = items[1];
-            }
-
-            return (userName, password);
-        }
-
         protected override Task<HttpContent> GetHttpContentAsync(IReadOnlyList<LoggingEvent> events)
         {
-            string json = this.SerializeAllToJson(events);
+            string json = SerializeAllToJson(events);
 
             HttpContent content = new StringContent(json);
 
-            if (!string.IsNullOrWhiteSpace(this.ContentType))
-                content.Headers.ContentType = MediaTypeHeaderValue.Parse(this.ContentType);
+            if (!string.IsNullOrWhiteSpace(ContentType))
+                content.Headers.ContentType = MediaTypeHeaderValue.Parse(ContentType);
 
             return Task.FromResult(content);
         }
@@ -194,7 +177,7 @@ namespace log4net.AsyncAppender.ElasticSearch
 
             foreach (var e in events)
             {
-                var json = this.SerializeToJson(e);
+                var json = SerializeToJson(e);
                 sb.AppendLine("{\"index\" : {} }");
                 sb.AppendLine(json);
             }
@@ -206,7 +189,7 @@ namespace log4net.AsyncAppender.ElasticSearch
 
         protected override string SerializeToJson(LoggingEvent @event)
         {
-            var projection = this.Projection?.Invoke(@event) ?? @event;
+            var projection = Projection?.Invoke(@event) ?? @event;
             var json = Utf8Json.JsonSerializer.ToJsonString(projection, Utf8Json.Resolvers.StandardResolver.CamelCase);
             return json;
         }

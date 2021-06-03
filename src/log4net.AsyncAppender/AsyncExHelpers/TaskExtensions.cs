@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -32,8 +30,8 @@ namespace log4net.AsyncAppender
 
         private static async Task DoWaitAsync(Task task, CancellationToken cancellationToken)
         {
-            using (var cancelTaskSource = new CancellationTokenTaskSource<object>(cancellationToken))
-                await await Task.WhenAny(task, cancelTaskSource.Task).ConfigureAwait(false);
+            using var cancelTaskSource = new CancellationTokenTaskSource<object>(cancellationToken);
+            await await Task.WhenAny(task, cancelTaskSource.Task).ConfigureAwait(false);
         }
     }
 }

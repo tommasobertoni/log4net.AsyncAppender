@@ -1,17 +1,23 @@
-﻿using log4net.Appender;
-using log4net.Core;
-using System;
+﻿using System;
 using System.Collections.Generic;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-
-[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("log4net.AsyncAppender.Tests")]
+using log4net.Appender;
+using log4net.Core;
 
 namespace log4net.AsyncAppender
 {
     public abstract class AsyncAppender : AppenderSkeleton
     {
+        private readonly CancellationTokenSource _cts = new();
+        private EventsHandler? _handler;
+
+        public AsyncAppender()
+        {
+            Activated = false;
+            AcceptsLoggingEvents = false;
+        }
+
         #region Configuration properties
 
         public int MaxConcurrentProcessorsCount { get; set; } = 3;
@@ -20,7 +26,7 @@ namespace log4net.AsyncAppender
 
         public int CloseTimeoutMillis { get; set; } = 5000;
 
-        public IAsyncAppenderConfigurator Configurator { get; set; }
+        public IAsyncAppenderConfigurator? Configurator { get; set; }
 
         public bool Trace { get; set; }
 
@@ -32,22 +38,13 @@ namespace log4net.AsyncAppender
 
         public bool IsProcessing => _handler?.IsProcessing ?? false;
 
-        private readonly CancellationTokenSource _cts = new CancellationTokenSource();
-        private EventsHandler _handler;
-
-        public AsyncAppender()
-        {
-            this.Activated = false;
-            this.AcceptsLoggingEvents = false;
-        }
-
         protected abstract Task ProcessAsync(IReadOnlyList<LoggingEvent> events, CancellationToken cancellationToken);
 
         #region Setup
 
         public override void ActivateOptions()
         {
-            base.ActivateOptions();
+            ActivateOptions();
 
             Configure();
 
@@ -61,13 +58,13 @@ namespace log4net.AsyncAppender
         {
             try
             {
-                this.Configurator?.Configure(this);
+                Configurator?.Configure(this);
             }
             catch (Exception ex)
             {
                 var message = "Error during configuration";
-                this.TryTrace(message, ex);
-                this.ErrorHandler?.Error(message, ex);
+                TryTrace(message, ex);
+                ErrorHandler?.Error(message, ex);
             }
         }
 
@@ -75,35 +72,35 @@ namespace log4net.AsyncAppender
         {
             try
             {
-                if (this.MaxConcurrentProcessorsCount < 1)
+                if (MaxConcurrentProcessorsCount < 1)
                 {
-                    var message = $"{nameof(this.MaxConcurrentProcessorsCount)} must be positive.";
-                    this.TryTrace(message);
-                    this.ErrorHandler?.Error(message);
+                    var message = $"{nameof(MaxConcurrentProcessorsCount)} must be positive.";
+                    TryTrace(message);
+                    ErrorHandler?.Error(message);
                     return false;
                 }
 
-                if (this.MaxBatchSize < 1)
+                if (MaxBatchSize < 1)
                 {
-                    var message = $"{nameof(this.MaxBatchSize)} must be positive.";
-                    this.TryTrace(message);
-                    this.ErrorHandler?.Error(message);
+                    var message = $"{nameof(MaxBatchSize)} must be positive.";
+                    TryTrace(message);
+                    ErrorHandler?.Error(message);
                     return false;
                 }
 
-                if (this.CloseTimeoutMillis <= 0)
+                if (CloseTimeoutMillis <= 0)
                 {
-                    var message = $"{nameof(this.CloseTimeoutMillis)} must be positive.";
-                    this.TryTrace(message);
-                    this.ErrorHandler?.Error(message);
+                    var message = $"{nameof(CloseTimeoutMillis)} must be positive.";
+                    TryTrace(message);
+                    ErrorHandler?.Error(message);
                     return false;
                 }
             }
             catch (Exception ex)
             {
                 var message = "Error during validation";
-                this.TryTrace(message, ex);
-                this.ErrorHandler?.Error(message, ex);
+                TryTrace(message, ex);
+                ErrorHandler?.Error(message, ex);
                 return false;
             }
 
@@ -113,27 +110,27 @@ namespace log4net.AsyncAppender
         protected virtual void Activate()
         {
             _handler = new EventsHandler(
-                this.ProcessAsync,
-                this.MaxConcurrentProcessorsCount,
-                this.MaxBatchSize,
+                ProcessAsync,
+                MaxConcurrentProcessorsCount,
+                MaxBatchSize,
                 _cts.Token)
             {
                 ErrorHandler = (ex, events) =>
                 {
                     var message = "An error occurred during events processing";
-                    this.TryTrace(message, ex);
-                    this.ErrorHandler?.Error(message, ex);
+                    TryTrace(message, ex);
+                    ErrorHandler?.Error(message, ex);
                 },
 
-                Tracer = message => this.TryTrace(message),
+                Tracer = message => TryTrace(message),
             };
 
             _handler.Start();
 
-            this.Activated = true;
-            this.AcceptsLoggingEvents = true;
+            Activated = true;
+            AcceptsLoggingEvents = true;
 
-            this.TryTrace("Activated");
+            TryTrace("Activated");
         }
 
         #endregion
@@ -142,66 +139,66 @@ namespace log4net.AsyncAppender
 
         protected override void Append(LoggingEvent[] loggingEvents)
         {
-            if (!this.Activated || !this.AcceptsLoggingEvents)
+            if (!Activated || !AcceptsLoggingEvents)
             {
                 var message = "This appender cannot process logging events.";
-                this.TryTrace(message);
-                this.ErrorHandler?.Error(message);
+                TryTrace(message);
+                ErrorHandler?.Error(message);
                 return;
             }
 
-            _handler.Handle(loggingEvents);
+            _handler!.Handle(loggingEvents);
         }
 
         protected override void Append(LoggingEvent loggingEvent)
         {
-            if (!this.Activated || !this.AcceptsLoggingEvents)
+            if (!Activated || !AcceptsLoggingEvents)
             {
                 var message = "This appender cannot process logging events.";
-                this.TryTrace(message);
-                this.ErrorHandler?.Error(message);
+                TryTrace(message);
+                ErrorHandler?.Error(message);
                 return;
             }
 
-            _handler.Handle(loggingEvent);
+            _handler!.Handle(loggingEvent);
         }
 
         #endregion
 
         #region Termination
 
-        ~AsyncAppender() => this.OnClose();
+        ~AsyncAppender() => OnClose();
 
         protected override void OnClose()
         {
-            base.OnClose();
+            OnClose();
 
-            if (!this.Activated) return;
+            if (!Activated) return;
 
-            this.AcceptsLoggingEvents = false;
-            this.TryTrace("Closing");
+            AcceptsLoggingEvents = false;
+            TryTrace("Closing");
 
             _cts.Cancel();
-            _handler.Dispose();
+            _handler!.Dispose();
 
-            var closingTimeout = Task.Delay(this.CloseTimeoutMillis);
+            var closingTimeout = Task.Delay(CloseTimeoutMillis);
 
             var processors = _handler.Processors;
             var processorsTermination = Task.WhenAll(processors);
 
             if (processors.Count > 0)
-                this.TryTrace($"Waiting for {processors.Count} processors to terminate.");
+                TryTrace($"Waiting for {processors.Count} processors to terminate.");
 
             int completedTaskIndex = Task.WaitAny(closingTimeout, processorsTermination);
             if (completedTaskIndex == 0)
             {
                 var message = $"Processors {processors.Count} termination timed out during appender OnClose.";
-                this.TryTrace(message);
-                this.ErrorHandler?.Error(message);
+                TryTrace(message);
+                ErrorHandler?.Error(message);
             }
 
-            this.Activated = false;
-            this.TryTrace("Deactivated");
+            Activated = false;
+            TryTrace("Deactivated");
         }
 
         #endregion
@@ -218,9 +215,9 @@ namespace log4net.AsyncAppender
 
         #region Trace
 
-        protected void TryTrace(string message, Exception exception = null)
+        protected void TryTrace(string message, Exception? exception = null)
         {
-            if (!this.Trace) return;
+            if (!Trace) return;
 
             if (exception == null)
                 System.Diagnostics.Trace.WriteLine(message);

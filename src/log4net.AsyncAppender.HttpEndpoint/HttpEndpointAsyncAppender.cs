@@ -7,69 +7,67 @@ using System.Threading;
 using System.Threading.Tasks;
 using log4net.Core;
 
-[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("log4net.AsyncAppender.HttpEndpoint.Tests")]
-
 namespace log4net.AsyncAppender
 {
     public abstract class HttpEndpointAsyncAppender : AsyncAppender
     {
+        protected Uri? _endpoint;
+
+        public HttpEndpointAsyncAppender() : base()
+        {
+            UseDefaultEventJsonSerializerWhenMissing = true;
+        }
+
+        public bool UseDefaultEventJsonSerializerWhenMissing { get; set; }
+
+        public HttpClient? HttpClient { get; set; }
+
+        public bool EnsureSuccessStatusCode { get; set; }
+
         #region Endpoint
 
-        public string Url { get; set; }
+        public string? Url { get; set; }
 
-        public string Scheme { get; set; }
+        public string? Scheme { get; set; }
 
-        public string Host { get; set; }
+        public string? Host { get; set; }
 
-        public string Path { get; set; }
+        public string? Path { get; set; }
 
-        public string Port { get; set; }
+        public string? Port { get; set; }
 
-        public string UserName { get; set; }
+        public string? UserName { get; set; }
 
-        public string Password { get; set; }
+        public string? Password { get; set; }
 
-        public string Query { get; set; }
+        public string? Query { get; set; }
 
         #endregion
 
         #region Json serialization
 
-        public IEventJsonSerializer EventJsonSerializer { get; set; }
+        public IEventJsonSerializer? EventJsonSerializer { get; set; }
 
-        public Func<LoggingEvent, string> EventJsonSerializerDelegate { get; set; }
+        public Func<LoggingEvent, string>? EventJsonSerializerDelegate { get; set; }
 
         #endregion
-
-        public bool UseDefaultEventJsonSerializerWhenMissing { get; set; }
-
-        public HttpClient HttpClient { get; set; }
-
-        public bool EnsureSuccessStatusCode { get; set; }
-
-        protected Uri _endpoint;
-
-        public HttpEndpointAsyncAppender() : base()
-        {
-            this.UseDefaultEventJsonSerializerWhenMissing = true;
-        }
 
         #region Setup
 
         protected override void Configure()
         {
-            base.Configure();
+            Configure();
 
-            if (this.EventJsonSerializer == null && this.EventJsonSerializerDelegate == null)
+            if (EventJsonSerializer == null && EventJsonSerializerDelegate == null)
             {
-                if (this.UseDefaultEventJsonSerializerWhenMissing)
-                    this.EventJsonSerializerDelegate = e =>
+                if (UseDefaultEventJsonSerializerWhenMissing)
+                    EventJsonSerializerDelegate = e =>
                         Utf8Json.JsonSerializer.ToJsonString(e, Utf8Json.Resolvers.StandardResolver.CamelCase);
             }
 
-            if (this.HttpClient == null)
+            if (HttpClient == null)
             {
-                this.HttpClient = NewHttpClient();
+                HttpClient = NewHttpClient();
             }
         }
 
@@ -84,71 +82,71 @@ namespace log4net.AsyncAppender
 
         protected override bool ValidateSelf()
         {
-            if (!base.ValidateSelf()) return false;
+            if (!ValidateSelf()) return false;
 
             try
             {
-                if (this.EventJsonSerializer == null &&
-                    this.EventJsonSerializerDelegate == null)
+                if (EventJsonSerializer == null &&
+                    EventJsonSerializerDelegate == null)
                 {
-                    this.ErrorHandler?.Error("Missing event to json serializer.");
+                    ErrorHandler?.Error("Missing event to json serializer.");
                     return false;
                 }
 
-                if (this.HttpClient == null)
+                if (HttpClient == null)
                 {
-                    this.ErrorHandler?.Error("Missing HttpClient");
+                    ErrorHandler?.Error("Missing HttpClient");
                     return false;
                 }
 
-                if (!string.IsNullOrWhiteSpace(this.Url))
+                if (!string.IsNullOrWhiteSpace(Url))
                 {
-                    if (!Uri.TryCreate(this.Url, UriKind.Absolute, out _))
+                    if (!Uri.TryCreate(Url, UriKind.Absolute, out _))
                     {
-                        this.ErrorHandler?.Error($"Invalid url: {this.Url}");
+                        ErrorHandler?.Error($"Invalid url: {Url}");
                         return false;
                     }
                 }
                 else
                 {
-                    if (string.IsNullOrWhiteSpace(this.Scheme))
+                    if (string.IsNullOrWhiteSpace(Scheme))
                     {
-                        this.ErrorHandler?.Error($"Missing scheme.");
+                        ErrorHandler?.Error($"Missing scheme.");
                         return false;
                     }
-                    else if (this.Scheme.ToLower() != Uri.UriSchemeHttp.ToLower() &&
-                             this.Scheme.ToLower() != Uri.UriSchemeHttps.ToLower())
+                    else if (Scheme!.ToLower() != Uri.UriSchemeHttp.ToLower() &&
+                             Scheme!.ToLower() != Uri.UriSchemeHttps.ToLower())
                     {
-                        this.ErrorHandler?.Error($"Invalid schema: must be either http or https.");
-                        return false;
-                    }
-
-                    if (string.IsNullOrWhiteSpace(this.Host))
-                    {
-                        this.ErrorHandler?.Error($"Missing host.");
+                        ErrorHandler?.Error($"Invalid schema: must be either http or https.");
                         return false;
                     }
 
-                    if (!string.IsNullOrWhiteSpace(this.Port))
+                    if (string.IsNullOrWhiteSpace(Host))
                     {
-                        if (!int.TryParse(this.Port, out _))
+                        ErrorHandler?.Error($"Missing host.");
+                        return false;
+                    }
+
+                    if (!string.IsNullOrWhiteSpace(Port))
+                    {
+                        if (!int.TryParse(Port, out _))
                         {
-                            this.ErrorHandler?.Error($"Invalid port.");
+                            ErrorHandler?.Error($"Invalid port.");
                             return false;
                         }
                     }
 
-                    if (!string.IsNullOrWhiteSpace(this.UserName) &&
-                        string.IsNullOrWhiteSpace(this.Password))
+                    if (!string.IsNullOrWhiteSpace(UserName) &&
+                        string.IsNullOrWhiteSpace(Password))
                     {
-                        this.ErrorHandler?.Error($"UserName without Password.");
+                        ErrorHandler?.Error($"UserName without Password.");
                         return false;
                     }
 
-                    if (!string.IsNullOrWhiteSpace(this.Password) &&
-                        string.IsNullOrWhiteSpace(this.UserName))
+                    if (!string.IsNullOrWhiteSpace(Password) &&
+                        string.IsNullOrWhiteSpace(UserName))
                     {
-                        this.ErrorHandler?.Error($"Password without UserName.");
+                        ErrorHandler?.Error($"Password without UserName.");
                         return false;
                     }
 
@@ -157,7 +155,7 @@ namespace log4net.AsyncAppender
 
                     if (!Uri.IsWellFormedUriString(uri.ToString(), UriKind.Absolute))
                     {
-                        this.ErrorHandler?.Error($"Uri is not well formed: {uri.ToString()}.");
+                        ErrorHandler?.Error($"Uri is not well formed: {uri}.");
                         return false;
                     }
                 }
@@ -166,14 +164,14 @@ namespace log4net.AsyncAppender
             }
             catch (Exception ex)
             {
-                this.ErrorHandler?.Error("Error during validation", ex);
+                ErrorHandler?.Error("Error during validation", ex);
                 return false;
             }
         }
 
         protected override void Activate()
         {
-            base.Activate();
+            Activate();
             _endpoint = CreateEndpoint();
         }
 
@@ -181,25 +179,25 @@ namespace log4net.AsyncAppender
 
         protected virtual Uri CreateEndpoint()
         {
-            if (!string.IsNullOrWhiteSpace(this.Url))
+            if (!string.IsNullOrWhiteSpace(Url))
             {
-                if (Uri.TryCreate(this.Url, UriKind.Absolute, out var endpoint))
+                if (Uri.TryCreate(Url, UriKind.Absolute, out var endpoint))
                     return endpoint;
             }
 
             var uriBuilder = new UriBuilder
             {
-                Scheme = this.Scheme,
-                Host = this.Host,
-                Path = this.Path,
-                UserName = this.UserName,
-                Password = this.Password,
-                Query = this.Query
+                Scheme = Scheme,
+                Host = Host,
+                Path = Path,
+                UserName = UserName,
+                Password = Password,
+                Query = Query
             };
 
-            if (!string.IsNullOrWhiteSpace(this.Port))
+            if (!string.IsNullOrWhiteSpace(Port))
             {
-                int.TryParse(this.Port, out var port);
+                int.TryParse(Port, out var port);
                 uriBuilder.Port = port;
             }
 
@@ -219,20 +217,20 @@ namespace log4net.AsyncAppender
                 request.Content = contentTask.Result;
 
                 // Don't use the cancellation token here: allow the last events to flush.
-                var response = await this.HttpClient.SendAsync(request, CancellationToken.None).ConfigureAwait(false);
+                var response = await HttpClient!.SendAsync(request, CancellationToken.None).ConfigureAwait(false);
 
                 if (!response.IsSuccessStatusCode)
                 {
-                    await this.HandleUnsuccessfulResponseAsync(
+                    await HandleUnsuccessfulResponseAsync(
                         events, request, response, cancellationToken).ConfigureAwait(false);
                 }
 
-                if (this.EnsureSuccessStatusCode)
+                if (EnsureSuccessStatusCode)
                     response.EnsureSuccessStatusCode();
             }
             catch (Exception ex)
             {
-                this.ErrorHandler?.Error($"Error while processing events", ex);
+                ErrorHandler?.Error($"Error while processing events", ex);
             }
         }
 
@@ -240,7 +238,7 @@ namespace log4net.AsyncAppender
         {
             var request = new HttpRequestMessage(HttpMethod.Post, _endpoint);
 
-            if (!string.IsNullOrWhiteSpace(_endpoint.UserInfo))
+            if (!string.IsNullOrWhiteSpace(_endpoint!.UserInfo))
             {
                 await ApplyUserInfoAsync(request, _endpoint.UserInfo).ConfigureAwait(false);
             }
@@ -268,9 +266,11 @@ namespace log4net.AsyncAppender
 
         protected virtual string SerializeToJson(LoggingEvent @event)
         {
-            return this.EventJsonSerializer != null
-                ? this.EventJsonSerializer.SerializeToJson(@event)
-                : this.EventJsonSerializerDelegate(@event);
+            return EventJsonSerializer is not null
+                ? EventJsonSerializer.SerializeToJson(@event)
+                : EventJsonSerializerDelegate is not null
+                ? EventJsonSerializerDelegate(@event)
+                : @event.ToString();
         }
 
         protected abstract Task<HttpContent> GetHttpContentAsync(IReadOnlyList<LoggingEvent> events);

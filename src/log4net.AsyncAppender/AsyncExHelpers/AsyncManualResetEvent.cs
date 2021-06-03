@@ -1,7 +1,5 @@
 ﻿using System.Threading;
-using System.Diagnostics;
 using System.Threading.Tasks;
-using System;
 
 // Code from AsyncEx: https://github.com/StephenCleary/AsyncEx
 // Original idea by Stephen Toub: http://blogs.msdn.com/b/pfxteam/archive/2012/02/11/10266920.aspx
@@ -21,7 +19,7 @@ namespace log4net.AsyncAppender
         /// <summary>
         /// The current state of the event.
         /// </summary>
-        private TaskCompletionSource<object> _tcs;
+        private TaskCompletionSource<object?> _tcs;
 
         /// <summary>
         /// Creates an async-compatible manual-reset event.
@@ -30,9 +28,8 @@ namespace log4net.AsyncAppender
         public AsyncManualResetEvent(bool set)
         {
             _mutex = new object();
-            _tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
-            if (set)
-                _tcs.TrySetResult(null);
+            _tcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
+            if (set) _tcs.TrySetResult(null);
         }
 
         /// <summary>
@@ -93,7 +90,7 @@ namespace log4net.AsyncAppender
             lock (_mutex)
             {
                 if (_tcs.Task.IsCompleted)
-                    _tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
+                    _tcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
             }
         }
     }
