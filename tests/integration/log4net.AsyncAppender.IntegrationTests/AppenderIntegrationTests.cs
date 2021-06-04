@@ -1,10 +1,7 @@
-﻿using IntegrationTests.Helpers;
+﻿using System.Threading.Tasks;
+using IntegrationTests.Helpers;
 using log4net;
 using NUnit.Framework;
-using System;
-using System.Collections.Generic;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace IntegrationTests
 {

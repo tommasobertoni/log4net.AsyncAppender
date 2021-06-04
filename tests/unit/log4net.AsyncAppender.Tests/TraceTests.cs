@@ -1,6 +1,5 @@
-﻿using NUnit.Framework;
-using System.Diagnostics;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
+using NUnit.Framework;
 using static Tests.MockFactory;
 
 namespace Tests

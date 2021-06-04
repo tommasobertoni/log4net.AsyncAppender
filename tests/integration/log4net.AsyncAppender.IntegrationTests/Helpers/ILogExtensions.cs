@@ -1,10 +1,6 @@
-﻿using log4net;
-using log4net.AsyncAppender;
+﻿using System.Linq;
+using log4net;
 using log4net.Repository.Hierarchy;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace IntegrationTests.Helpers
 {
@@ -21,7 +17,7 @@ namespace IntegrationTests.Helpers
         {
             var hierarchy = (Hierarchy)log.Logger.Repository;
             var existingAppender = log.GetElasticsearchAppender();
-            if (existingAppender != null)
+            if (existingAppender is not null)
             {
                 var removedAppender = hierarchy.Root.RemoveAppender(existingAppender);
                 removedAppender.Close();

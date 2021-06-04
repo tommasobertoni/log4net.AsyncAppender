@@ -1,14 +1,7 @@
-﻿using log4net.Core;
-using System.Linq;
-using Moq;
-using Moq.Protected;
-using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Net.Http;
-using System.Threading;
-using System.Threading.Tasks;
+﻿using System;
 using log4net;
+using log4net.Core;
+using Moq;
 using NUnit.Framework;
 
 namespace IntegrationTests.Helpers
@@ -101,23 +94,23 @@ namespace IntegrationTests.Helpers
             Assert.That(appender, Is.EqualTo(_log.GetElasticsearchAppender()));
 
             currentAppender?.Close();
-            this.Appender = appender;
+            Appender = appender;
         }
 
         public void VerifyLogsCount()
         {
-            Assert.That(this.Appender.EventsProcessedCount, Is.EqualTo(this.LogsCount));
+            Assert.That(Appender.EventsProcessedCount, Is.EqualTo(LogsCount));
 
-            var invocations = (this.LogsCount / this.Appender.MaxBatchSize) + 1;
-            Assert.That(this.Appender.ProcessInvocationsCount, Is.GreaterThanOrEqualTo(invocations));
+            var invocations = (LogsCount / Appender.MaxBatchSize) + 1;
+            Assert.That(Appender.ProcessInvocationsCount, Is.GreaterThanOrEqualTo(invocations));
         }
 
         public void VerifyPartialLogsCount(bool allowZeroInvocations = false)
         {
-            Assert.That(this.Appender.EventsProcessedCount, Is.InRange(1, this.LogsCount));
+            Assert.That(Appender.EventsProcessedCount, Is.InRange(1, LogsCount));
 
             if (!allowZeroInvocations)
-                Assert.That(this.Appender.EventsProcessedCount, Is.GreaterThanOrEqualTo(1));
+                Assert.That(Appender.EventsProcessedCount, Is.GreaterThanOrEqualTo(1));
         }
 
         public void VerifyNoErrors()

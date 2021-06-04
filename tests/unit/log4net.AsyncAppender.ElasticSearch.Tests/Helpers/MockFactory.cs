@@ -1,11 +1,4 @@
-﻿using log4net.AsyncAppender;
-using log4net.Core;
-using System;
-using System.Collections.Generic;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace Tests
+﻿namespace Tests
 {
     internal static class MockFactory
     {

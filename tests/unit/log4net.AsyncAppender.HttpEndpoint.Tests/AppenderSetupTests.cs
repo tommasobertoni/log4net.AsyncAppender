@@ -1,8 +1,5 @@
-using System;
-using System.Threading.Tasks;
+﻿using System;
 using log4net.AsyncAppender;
-using Moq;
-using Moq.Protected;
 using NUnit.Framework;
 using static Tests.MockFactory;
 
@@ -340,64 +337,6 @@ namespace Tests
         private class MockEventJsonSerializer : IEventJsonSerializer
         {
             public string SerializeToJson(log4net.Core.LoggingEvent loggingEvent) => string.Empty;
-        }
-
-        [Test]
-        public async Task SuccessStatusCodeCanBeEnsured()
-        {
-            //bool fail = false;
-
-            //var mockHandler = new Mock<System.Net.Http.HttpClientHandler>();
-            //mockHandler.Protected()
-            //    .Setup<Task<System.Net.Http.HttpResponseMessage>>(
-            //        "SendAsync",
-            //        ItExpr.IsAny<System.Net.Http.HttpRequestMessage>(),
-            //        ItExpr.IsAny<System.Threading.CancellationToken>())
-            //    .Returns(() => Task.FromResult(new System.Net.Http.HttpResponseMessage(fail
-            //        ? System.Net.HttpStatusCode.BadRequest
-            //        : System.Net.HttpStatusCode.OK)));
-
-            //var (appender, meh) = GetAnAppenderWithErrorHandler();
-
-            //Assert.That(appender.EnsureSuccessStatusCode, Is.False); // Default.
-
-            //appender.EnsureSuccessStatusCode = true;
-            //appender.HttpClient = new System.Net.Http.HttpClient(mockHandler.Object);
-
-            //appender.Scheme = "https";
-            //appender.Host = "www.server.com";
-            //appender.Path = "/test/api";
-
-            //appender.ActivateOptions();
-
-            //await new ProcessingStarted(appender);
-
-            //Assert.That(meh.ErrorsCount, Is.Zero);
-            //Assert.That(appender.Activated);
-            //Assert.That(appender.AcceptsLoggingEvents);
-
-            //var @event = new log4net.Core.LoggingEvent(new log4net.Core.LoggingEventData());
-
-            //appender.Append(@event);
-            //await new ProcessingTerminationTask(appender);
-            //Assert.That(meh.ErrorsCount, Is.Zero);
-
-            //fail = true;
-            //appender.Append(@event);
-            //appender.Append(@event);
-            //await Task.Delay(1000);
-            //await new ProcessingTerminationTask(appender);
-            //Assert.That(meh.ErrorsCount, Is.EqualTo(2));
-
-            //Assert.That(fail);
-            //appender.EnsureSuccessStatusCode = false;
-            //appender.Append(@event);
-            //appender.Append(@event);
-            //await Task.Delay(10);
-            //await new ProcessingTerminationTask(appender);
-            //Assert.That(meh.ErrorsCount, Is.EqualTo(2));
-
-            //appender.Close();
         }
     }
 }

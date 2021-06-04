@@ -1,10 +1,6 @@
-﻿using NUnit.Framework;
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Text;
+﻿using System.Diagnostics;
 using System.Threading;
-using System.Linq;
+using NUnit.Framework;
 
 namespace Tests
 {

@@ -1,10 +1,8 @@
-﻿using log4net.AsyncAppender;
-using log4net.Core;
-using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using log4net.AsyncAppender;
+using log4net.Core;
 
 namespace IntegrationTests.Helpers
 {

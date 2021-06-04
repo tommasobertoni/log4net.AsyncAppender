@@ -1,7 +1,5 @@
-﻿using log4net.Core;
-using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using System;
+using log4net.Core;
 
 namespace Tests
 {
@@ -9,14 +7,14 @@ namespace Tests
     {
         public int ErrorsCount { get; private set; }
 
-        public void Error(string message) => this.Error(message, null as Exception);
-
-        public void Error(string message, Exception e) => this.Error(message, e, ErrorCode.GenericFailure);
-
-        public void Error(string message, Exception e, ErrorCode errorCode)
+        public void Error(string message)
         {
             NUnit.Framework.TestContext.Out.WriteLine(message);
-            this.ErrorsCount++;
+            ErrorsCount++;
         }
+
+        public void Error(string message, Exception e) => Error(message, e, ErrorCode.GenericFailure);
+
+        public void Error(string message, Exception e, ErrorCode errorCode) => Error(message);
     }
 }

@@ -1,7 +1,5 @@
-﻿using log4net.AsyncAppender;
-using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using System;
+using log4net.AsyncAppender;
 
 namespace Tests
 {
@@ -13,10 +11,10 @@ namespace Tests
 
         public void Configure(AsyncAppender appender)
         {
-            if (this.Throw)
+            if (Throw)
                 throw new Exception();
 
-            this.InvocationsCount++;
+            InvocationsCount++;
         }
     }
 }

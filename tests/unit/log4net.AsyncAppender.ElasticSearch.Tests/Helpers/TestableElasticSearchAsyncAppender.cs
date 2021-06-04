@@ -17,24 +17,24 @@ namespace Tests
         public TestableElasticSearchAsyncAppender(bool autoConfigure = true)
         {
             if (autoConfigure)
-                this.Configure();
+                Configure();
         }
 
         protected override Task ProcessAsync(IReadOnlyList<LoggingEvent> events, CancellationToken cancellationToken)
         {
             foreach (var e in events)
-                this.Projection(e);
+                Projection(e);
 
             Interlocked.Increment(ref _processAsyncInvocationsCount);
             return Task.CompletedTask;
         }
 
-        public new Uri CreateEndpoint() => base.CreateEndpoint();
+        public new Uri CreateEndpoint() => CreateEndpoint();
 
-        public new void Configure() => base.Configure();
+        public new void Configure() => Configure();
 
-        public new bool ValidateSelf() => base.ValidateSelf();
+        public new bool ValidateSelf() => ValidateSelf();
 
-        public new void Append(LoggingEvent @event) => base.Append(@event);
+        public new void Append(LoggingEvent @event) => Append(@event);
     }
 }

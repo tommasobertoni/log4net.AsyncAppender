@@ -1,10 +1,6 @@
-﻿using log4net;
+﻿using IntegrationTests.Helpers;
+using log4net;
 using NUnit.Framework;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using IntegrationTests.Helpers;
 
 [assembly: log4net.Config.XmlConfigurator(ConfigFile = "log4net.config")]
 

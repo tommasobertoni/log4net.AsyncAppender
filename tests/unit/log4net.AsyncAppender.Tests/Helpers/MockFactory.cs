@@ -1,9 +1,4 @@
-﻿using log4net.AsyncAppender;
-using log4net.Core;
-using Moq;
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Linq;
 
 namespace Tests
@@ -43,14 +38,13 @@ namespace Tests
         {
             var currentTraceListener = GetCurrentTestTraceListener();
 
-            if (currentTraceListener != null)
+            if (currentTraceListener is not null)
                 Trace.Listeners.Remove(currentTraceListener);
 
             var testTraceListener = new TestTraceListener(writeToTestContext: true);
             Trace.Listeners.Add(testTraceListener);
         }
 
-        public static MockAsyncAppenderConfigurator GetAConfigurator()
-            => new MockAsyncAppenderConfigurator();
+        public static MockAsyncAppenderConfigurator GetAConfigurator() => new();
     }
 }
