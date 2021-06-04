@@ -1,6 +1,10 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+  </PropertyGroup>
+
+  <PropertyGroup>
     <!-- Properties related to NuGet packaging -->
     <PackageId>log4net.AsyncAppender.ElasticSearch</PackageId>
     <Title>A fast and asynchronous log4net appender for ElasticSearch.</Title>
