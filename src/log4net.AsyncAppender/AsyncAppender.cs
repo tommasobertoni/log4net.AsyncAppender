@@ -44,7 +44,7 @@ namespace log4net.AsyncAppender
 
         public override void ActivateOptions()
         {
-            ActivateOptions();
+            base.ActivateOptions();
 
             Configure();
 
@@ -171,7 +171,7 @@ namespace log4net.AsyncAppender
 
         protected override void OnClose()
         {
-            OnClose();
+            base.OnClose();
 
             if (!Activated) return;
 
