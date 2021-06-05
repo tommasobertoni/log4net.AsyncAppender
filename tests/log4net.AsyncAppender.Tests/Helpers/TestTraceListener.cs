@@ -1,6 +1,6 @@
 ﻿using System.Diagnostics;
 using System.Threading;
-using NUnit.Framework;
+using Xunit.Abstractions;
 
 namespace Tests
 {
@@ -9,22 +9,22 @@ namespace Tests
         public int WritesCount => _writesCount;
 
         private int _writesCount = 0;
-        private readonly bool _writeToTestContext;
+        private readonly ITestOutputHelper _testOutputHelper;
 
-        public TestTraceListener(bool writeToTestContext = false)
+        public TestTraceListener(ITestOutputHelper testOutputHelper = null)
         {
-            _writeToTestContext = writeToTestContext;
+            _testOutputHelper = testOutputHelper;
         }
 
         public override void Write(string message)
         {
-            if (_writeToTestContext) TestContext.Write(message);
+            if (_testOutputHelper is not null) _testOutputHelper.WriteLine(message);
             Interlocked.Increment(ref _writesCount);
         }
 
         public override void WriteLine(string message)
         {
-            if (_writeToTestContext) TestContext.WriteLine(message);
+            if (_testOutputHelper is not null) _testOutputHelper.WriteLine(message);
             Interlocked.Increment(ref _writesCount);
         }
     }

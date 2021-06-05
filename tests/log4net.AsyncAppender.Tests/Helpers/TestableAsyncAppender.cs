@@ -28,10 +28,10 @@ namespace Tests
             return Task.CompletedTask;
         }
 
-        public new void Configure() => Configure();
+        public new void Configure() => base.Configure();
 
-        public new bool ValidateSelf() => ValidateSelf();
+        public new bool ValidateSelf() => base.ValidateSelf();
 
-        public new void Append(LoggingEvent @event) => Append(@event);
+        public new void Append(LoggingEvent @event) => base.Append(@event);
     }
 }
