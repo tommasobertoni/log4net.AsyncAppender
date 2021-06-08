@@ -56,7 +56,7 @@ namespace log4net.AsyncAppender
 
         protected override void Configure()
         {
-            Configure();
+            base.Configure();
 
             if (EventJsonSerializer == null && EventJsonSerializerDelegate == null)
             {
@@ -82,7 +82,7 @@ namespace log4net.AsyncAppender
 
         protected override bool ValidateSelf()
         {
-            if (!ValidateSelf()) return false;
+            if (!base.ValidateSelf()) return false;
 
             try
             {
@@ -171,7 +171,7 @@ namespace log4net.AsyncAppender
 
         protected override void Activate()
         {
-            Activate();
+            base.Activate();
             _endpoint = CreateEndpoint();
         }
 
