@@ -28,12 +28,12 @@ namespace Tests
 
         protected override Task<HttpContent> GetHttpContentAsync(IReadOnlyList<LoggingEvent> events) => null;
 
-        public new Uri CreateEndpoint() => CreateEndpoint();
+        public new Uri CreateEndpoint() => base.CreateEndpoint();
 
-        public new void Configure() => Configure();
+        public new void Configure() => base.Configure();
 
-        public new bool ValidateSelf() => ValidateSelf();
+        public new bool ValidateSelf() => base.ValidateSelf();
 
-        public new void Append(LoggingEvent @event) => Append(@event);
+        public new void Append(LoggingEvent @event) => base.Append(@event);
     }
 }

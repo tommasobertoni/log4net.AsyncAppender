@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net5.0</TargetFramework>
+    <Nullable>disable</Nullable>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="..\log4net.AsyncAppender.Tests\Helpers\MockErrorHandler.cs" Link="Helpers\MockErrorHandler.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\log4net.AsyncAppender.HttpEndpoint\log4net.AsyncAppender.HttpEndpoint.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.8.3" />
+    <PackageReference Include="xunit" Version="2.4.1" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.4.3" PrivateAssets="all" />
+    <PackageReference Include="coverlet.collector" Version="1.3.0" PrivateAssets="all" />
+    <PackageReference Include="coverlet.msbuild" Version="2.9.0" PrivateAssets="all" />
+  </ItemGroup>
+
+</Project>
