@@ -61,7 +61,7 @@ namespace log4net.AsyncAppender.ElasticSearch
                 Projection = ProjectToElasticModel;
             }
 
-            Configure();
+            base.Configure();
 
             if (string.IsNullOrWhiteSpace(ContentType))
             {
@@ -82,7 +82,7 @@ namespace log4net.AsyncAppender.ElasticSearch
 
         protected override bool ValidateSelf()
         {
-            if (!ValidateSelf()) return false;
+            if (!base.ValidateSelf()) return false;
 
             try
             {
@@ -122,7 +122,7 @@ namespace log4net.AsyncAppender.ElasticSearch
 
         protected override Uri CreateEndpoint()
         {
-            var uri = CreateEndpoint();
+            var uri = base.CreateEndpoint();
             var builder = new UriBuilder(uri);
             var query = System.Web.HttpUtility.ParseQueryString(builder.Query);
 

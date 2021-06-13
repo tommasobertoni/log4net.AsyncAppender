@@ -1,10 +1,9 @@
-﻿using log4net.AsyncAppender.ElasticSearch;
-using log4net.Core;
-using System;
+﻿using System;
 using System.Collections.Generic;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using log4net.AsyncAppender.ElasticSearch;
+using log4net.Core;
 
 namespace Tests
 {
@@ -29,12 +28,12 @@ namespace Tests
             return Task.CompletedTask;
         }
 
-        public new Uri CreateEndpoint() => CreateEndpoint();
+        public new Uri CreateEndpoint() => base.CreateEndpoint();
 
-        public new void Configure() => Configure();
+        public new void Configure() => base.Configure();
 
-        public new bool ValidateSelf() => ValidateSelf();
+        public new bool ValidateSelf() => base.ValidateSelf();
 
-        public new void Append(LoggingEvent @event) => Append(@event);
+        public new void Append(LoggingEvent @event) => base.Append(@event);
     }
 }
