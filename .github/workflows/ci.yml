@@ -1,0 +1,58 @@
+name: CI
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+    branches: [main, dev]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v1.7.2
+        with:
+          dotnet-version: 5.0.x
+      - name: Install dependencies
+        run: dotnet restore log4net.AsyncAppender.sln
+      - name: Build
+        run: dotnet build log4net.AsyncAppender.sln -c Release
+
+  test:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Setup .NET 5 SDK and runtime
+        uses: actions/setup-dotnet@v1.7.2
+        with:
+          dotnet-version: 5.0.x
+      - name: Tests
+        run: |
+          dotnet build log4net.AsyncAppender.sln -c Release
+          dotnet test --no-build --verbosity normal -c Release
+
+  coverage:
+    if: ${{ github.event_name == 'push' }}
+    needs: [test]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-dotnet@v1.7.2
+        with:
+          dotnet-version: 5.0.x
+      - run: dotnet build -c Debug log4net.AsyncAppender.sln
+      - name: Collect coverage
+        run: dotnet test -c Debug /p:CollectCoverage=true /p:CoverletOutput=coverage/ /p:CoverletOutputFormat=lcov
+      - name: Upload coverage artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: coverage.info
+          path: tests/NScatterGather.Tests/coverage/coverage.net5.0.info
+      - name: Upload to Coveralls.io
+        uses: coverallsapp/github-action@v1.1.2
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path-to-lcov: tests/NScatterGather.Tests/coverage/coverage.net5.0.info
