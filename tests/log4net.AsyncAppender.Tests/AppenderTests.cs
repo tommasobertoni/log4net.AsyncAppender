@@ -141,14 +141,14 @@ namespace Tests
             for (int i = 0; i < logsCount; i++)
                 _appender.Append(@event);
 
-            var startTimeoutTask = Task.Delay(100 * (Debugger.IsAttached ? 1000 : 1));
+            var startTimeoutTask = Task.Delay(3000);
             var completedStartTask = await Task.WhenAny(startTimeoutTask, processingStartedTask);
             if (completedStartTask == startTimeoutTask) throw new Exception("Start timed out");
 
             var processingTerminatedTask = _appender.ProcessingTerminated();
             Assert.NotNull(processingTerminatedTask);
 
-            var stopTimeoutTask = Task.Delay(100 * (Debugger.IsAttached ? 1000 : 1));
+            var stopTimeoutTask = Task.Delay(3000);
             var completedTerminationTask = await Task.WhenAny(stopTimeoutTask, processingTerminatedTask);
             if (completedTerminationTask == stopTimeoutTask) throw new Exception("Stop timed out");
 
