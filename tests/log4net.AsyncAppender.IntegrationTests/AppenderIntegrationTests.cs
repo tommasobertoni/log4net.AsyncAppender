@@ -1,40 +1,46 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
 using IntegrationTests.Helpers;
 using log4net;
-using NUnit.Framework;
+using Xunit;
+using Xunit.Abstractions;
+
+[assembly: log4net.Config.XmlConfigurator(ConfigFile = "log4net.config")]
+[assembly: CollectionBehavior(DisableTestParallelization = true)]
 
 namespace IntegrationTests
 {
-    public class AppenderIntegrationTests
+    public class AppenderIntegrationTests : IDisposable
     {
-        private ILog _log;
-        private TestToolbox _toolbox;
+        private readonly ITestOutputHelper _testOutputHelper;
+        private readonly ILog _log;
+        private readonly TestToolbox _toolbox;
 
-        [SetUp]
-        public void SetUp()
+        public AppenderIntegrationTests(ITestOutputHelper testOutputHelper)
         {
+            _testOutputHelper = testOutputHelper;
             _log = LogManager.GetLogger(typeof(AppenderIntegrationTests));
-            _toolbox = new TestToolbox(_log, TestContext.Out.WriteLine);
+            _toolbox = new TestToolbox(_log, testOutputHelper.WriteLine);
         }
 
         #region Single log
 
-        [Test]
-        public async Task LogIsProcessedWithSingleProcessor()
+        [Fact]
+        public async Task Single_log_is_processed_with_single_processor()
         {
             _toolbox.ReplaceConfiguredAppenderWithTestAppender(processorsCount: 1);
             await Test_Log_is_processed();
         }
 
-        [Test]
-        public async Task Log_is_processed_with_two_processors()
+        [Fact]
+        public async Task Single_log_is_processed_with_two_processors()
         {
             _toolbox.ReplaceConfiguredAppenderWithTestAppender(processorsCount: 2);
             await Test_Log_is_processed();
         }
 
-        [Test]
-        public async Task Log_is_processed_with_many_processors()
+        [Fact]
+        public async Task Single_log_is_processed_with_many_processors()
         {
             _toolbox.ReplaceConfiguredAppenderWithTestAppender(processorsCount: 10);
             await Test_Log_is_processed();
@@ -47,7 +53,7 @@ namespace IntegrationTests
 
             await _toolbox.Appender.ProcessingStarted();
 
-            var testTimeoutTask = GetTimeoutTask();
+            var testTimeoutTask = Task.Delay(3000);
             var processingTerminationTask = _toolbox.Appender.ProcessingTerminated();
             var completedTask = await Task.WhenAny(testTimeoutTask, processingTerminationTask);
 
@@ -61,28 +67,28 @@ namespace IntegrationTests
 
         #region Many logs
 
-        [Test]
-        public async Task Logs_are_processed_with_single_processor()
+        [Fact]
+        public async Task Many_logs_are_processed_with_single_processor()
         {
             _toolbox.ReplaceConfiguredAppenderWithTestAppender(processorsCount: 1);
             var loggedEventsCount = (int)(_toolbox.Appender.MaxBatchSize * 1.2);
-            await Test_Logs_are_processed(loggedEventsCount, nameof(Logs_are_processed_with_single_processor));
+            await Test_Logs_are_processed(loggedEventsCount, nameof(Many_logs_are_processed_with_single_processor));
         }
 
-        [Test]
-        public async Task Logs_are_processed_with_two_processors()
+        [Fact]
+        public async Task Many_logs_are_processed_with_two_processors()
         {
             _toolbox.ReplaceConfiguredAppenderWithTestAppender(processorsCount: 2);
             var loggedEventsCount = (_toolbox.Appender.MaxBatchSize * 4) + 1;
-            await Test_Logs_are_processed(loggedEventsCount, nameof(Logs_are_processed_with_two_processors));
+            await Test_Logs_are_processed(loggedEventsCount, nameof(Many_logs_are_processed_with_two_processors));
         }
 
-        [Test]
-        public async Task Logs_are_processed_with_many_processors()
+        [Fact]
+        public async Task Many_logs_are_processed_with_many_processors()
         {
             _toolbox.ReplaceConfiguredAppenderWithTestAppender(processorsCount: 100);
             var loggedEventsCount = (_toolbox.Appender.MaxBatchSize * 50) + 1;
-            await Test_Logs_are_processed(loggedEventsCount, nameof(Logs_are_processed_with_many_processors));
+            await Test_Logs_are_processed(loggedEventsCount, nameof(Many_logs_are_processed_with_many_processors));
         }
 
         private async Task Test_Logs_are_processed(int loggedEventsCount, string testName)
@@ -94,7 +100,7 @@ namespace IntegrationTests
 
             await _toolbox.Appender.ProcessingStarted();
 
-            var testTimeoutTask = GetTimeoutTask();
+            var testTimeoutTask = Task.Delay(3000);
             var processingTerminationTask = _toolbox.Appender.ProcessingTerminated();
             var resultingTask = await Task.WhenAny(testTimeoutTask, processingTerminationTask);
 
@@ -102,15 +108,15 @@ namespace IntegrationTests
 
             if (resultingTask == processingTerminationTask)
             {
-                TestContext.Out.WriteLine($"{testName}: {loggedEventsCount} logs have been processed in: {sw.Elapsed}");
+                _testOutputHelper.WriteLine($"{testName}: {loggedEventsCount} logs have been processed in: {sw.Elapsed}");
                 if (sw.ElapsedMilliseconds > 0)
                 {
                     var efficiency = loggedEventsCount / sw.ElapsedMilliseconds;
-                    TestContext.Out.WriteLine($"Processed ~{efficiency} logs / millisecond.");
+                    _testOutputHelper.WriteLine($"Processed ~{efficiency} logs / millisecond.");
                 }
                 else
                 {
-                    TestContext.Out.WriteLine("Elapsed 0 milliseconds.");
+                    _testOutputHelper.WriteLine("Elapsed 0 milliseconds.");
                 }
             }
             else Assert.True(false, $"Timed out.");
@@ -122,7 +128,7 @@ namespace IntegrationTests
 
         #region Some logs
 
-        [Test]
+        [Fact]
         public async Task Some_logs_are_processed_with_single_processor()
         {
             _toolbox.ReplaceConfiguredAppenderWithTestAppender(processorsCount: 1);
@@ -131,14 +137,14 @@ namespace IntegrationTests
             await Test_Some_logs_are_processed(allowZeroHttpCallswZero: true);
         }
 
-        [Test]
+        [Fact]
         public async Task Some_logs_are_processed_with_two_processors()
         {
             _toolbox.ReplaceConfiguredAppenderWithTestAppender(processorsCount: 2);
             await Test_Some_logs_are_processed();
         }
 
-        [Test]
+        [Fact]
         public async Task Some_logs_are_processed_with_many_processors()
         {
             _toolbox.ReplaceConfiguredAppenderWithTestAppender(processorsCount: 10);
@@ -153,23 +159,17 @@ namespace IntegrationTests
 
             // Delay exiting the test to allow some logs to be processed
             // but don't wait the full processing to complete.
-            await Task.Delay(_toolbox.Appender.MaxBatchSize);
+            await Task.Yield();
 
             _toolbox.VerifyPartialLogsCount(allowZeroHttpCallswZero);
         }
 
         #endregion
 
-        [TearDown]
-        public void TearDown()
+        public void Dispose()
         {
             _toolbox.Appender.Close();
             _toolbox.VerifyNoErrors();
-        }
-
-        private Task GetTimeoutTask()
-        {
-            return Task.Delay(System.Diagnostics.Debugger.IsAttached ? int.MaxValue : 2_000);
         }
     }
 }

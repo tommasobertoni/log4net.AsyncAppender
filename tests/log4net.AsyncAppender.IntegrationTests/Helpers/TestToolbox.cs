@@ -2,7 +2,7 @@
 using log4net;
 using log4net.Core;
 using Moq;
-using NUnit.Framework;
+using Xunit;
 
 namespace IntegrationTests.Helpers
 {
@@ -83,15 +83,15 @@ namespace IntegrationTests.Helpers
 
             appender.ActivateOptions();
 
-            Assert.That(appender.Activated, Is.True);
-            Assert.That(appender.AcceptsLoggingEvents, Is.True);
-            Assert.That(appender.IsProcessing, Is.False);
+            Assert.True(appender.Activated);
+            Assert.True(appender.AcceptsLoggingEvents);
+            Assert.False(appender.IsProcessing);
 
             var currentAppender = _log.GetElasticsearchAppender();
-            Assert.That(appender, Is.Not.EqualTo(currentAppender));
+            Assert.NotEqual(currentAppender, appender);
 
             _log.SetElasticsearchAppender(appender);
-            Assert.That(appender, Is.EqualTo(_log.GetElasticsearchAppender()));
+            Assert.Equal(_log.GetElasticsearchAppender(), appender);
 
             currentAppender?.Close();
             Appender = appender;
@@ -99,18 +99,18 @@ namespace IntegrationTests.Helpers
 
         public void VerifyLogsCount()
         {
-            Assert.That(Appender.EventsProcessedCount, Is.EqualTo(LogsCount));
+            Assert.Equal(LogsCount, Appender.EventsProcessedCount);
 
             var invocations = (LogsCount / Appender.MaxBatchSize) + 1;
-            Assert.That(Appender.ProcessInvocationsCount, Is.GreaterThanOrEqualTo(invocations));
+            Assert.True(Appender.ProcessInvocationsCount >= invocations);
         }
 
         public void VerifyPartialLogsCount(bool allowZeroInvocations = false)
         {
-            Assert.That(Appender.EventsProcessedCount, Is.InRange(1, LogsCount));
+            Assert.InRange(Appender.EventsProcessedCount, 1, LogsCount);
 
             if (!allowZeroInvocations)
-                Assert.That(Appender.EventsProcessedCount, Is.GreaterThanOrEqualTo(1));
+                Assert.True(Appender.EventsProcessedCount >= 1);
         }
 
         public void VerifyNoErrors()
