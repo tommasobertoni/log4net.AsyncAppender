@@ -1,3 +1,8 @@
+pack/*.*
+!pack/*.sh
+pack/pack.sh
+coverage-hits/
+coverage.*
 
 # Created by https://www.gitignore.io/api/csharp,visualstudio
 # Edit at https://www.gitignore.io/?templates=csharp,visualstudio
